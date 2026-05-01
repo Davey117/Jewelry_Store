@@ -5,7 +5,7 @@ from typing import List
 from app.core.database import get_db
 from app.models.product import Product, Category
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse, CategoryCreate, CategoryResponse
-from app.api.deps import get_admin_user, get_staff_user
+from app.api.deps import get_admin_user
 from app.models.user import User
 
 router = APIRouter(prefix="/api/catalog", tags=["Catalog & Inventory"])
@@ -26,7 +26,7 @@ def get_categories(db: Session = Depends(get_db)):
     return db.query(Category).all()
 
 @router.post("/products", response_model=ProductResponse)
-def create_product(product: ProductCreate, db: Session = Depends(get_db), current_user: User = Depends(get_staff_user)):
+def create_product(product: ProductCreate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     new_product = Product(**product.model_dump())
     db.add(new_product)
     db.commit()
@@ -38,7 +38,7 @@ def get_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
     return db.query(Product).filter(Product.is_active == True).offset(skip).limit(limit).all()
 
 @router.put("/products/{product_id}", response_model=ProductResponse)
-def update_product(product_id: int, product_update: ProductUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_staff_user)):
+def update_product(product_id: int, product_update: ProductUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     db_product = db.query(Product).filter(Product.id == product_id).first()
     if not db_product:
         raise HTTPException(status_code=404, detail="Product not found")
