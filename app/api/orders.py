@@ -5,9 +5,9 @@ from typing import List
 from app.core.database import get_db
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.product import Product
-from app.models.user import User, RoleEnum
+from app.models.user import User  # <-- RoleEnum is gone!
 from app.schemas.order import OrderCreate, OrderResponse
-from app.api.deps import get_current_active_user, get_staff_user
+from app.api.deps import get_current_active_user, get_admin_user # <-- Swapped get_staff_user for get_admin_user
 
 router = APIRouter(prefix="/api/orders", tags=["Orders & Checkout"])
 
@@ -54,12 +54,14 @@ def checkout(order_data: OrderCreate, db: Session = Depends(get_db), current_use
 
 @router.get("/", response_model=List[OrderResponse])
 def get_orders(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
-    if current_user.role in [RoleEnum.ADMIN, RoleEnum.STAFF]:
+    # 🛡️ Both admin levels can view all store orders
+    if current_user.role in ["admin", "super_admin"]:
         return db.query(Order).all()
+    # Regular users only see their own orders
     return db.query(Order).filter(Order.user_id == current_user.id).all()
 
 @router.patch("/{order_id}/status", response_model=OrderResponse)
-def update_order_status(order_id: int, status: OrderStatus, tracking_number: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_staff_user)):
+def update_order_status(order_id: int, status: OrderStatus, tracking_number: str = None, db: Session = Depends(get_db), current_user: User = Depends(get_admin_user)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
