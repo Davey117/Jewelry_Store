@@ -12,6 +12,8 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days for a better e-commerce UX
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 # Set up the bcrypt password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
