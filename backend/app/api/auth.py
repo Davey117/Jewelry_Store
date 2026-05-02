@@ -1,6 +1,6 @@
 import resend
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status, Background_Tasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from itsdangerous import URLSafeTimedSerializer
@@ -64,7 +64,7 @@ def send_branded_email(to_email: str, subject: str, title: str, body_text: str, 
 # --- Endpoints ---
 
 @router.post("/register", response_model=UserResponse)
-async def register(user_data: UserCreate, background_tasks: Background_Tasks, db: Session = Depends(get_db)):
+async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -146,7 +146,7 @@ def google_login(data: GoogleToken, db: Session = Depends(get_db)):
 # --- Password Reset ---
 
 @router.post("/forgot-password")
-async def forgot_password(request: ForgotPassword, background_tasks: Background_Tasks, db: Session = Depends(get_db)):
+async def forgot_password(request: ForgotPassword, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
     if user:
         token = create_password_reset_token(email=user.email)
