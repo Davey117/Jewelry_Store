@@ -23,7 +23,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173", 
         "http://127.0.0.1:5173", # Your local Vite React app
-        # "https://your-future-custom-domain.com" <-- You can add your live frontend URL here later!
+        "https://jewelry-store-silk-six.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
