@@ -1,16 +1,23 @@
 # app/schemas/user.py
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import Optional
 
 # 1. What the user sends us when they sign up
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    first_name: str
+    last_name: str
+    phone: Optional[str] = None
+    address: Optional[str] = None
 
 # 2. What we send back to the user (Notice: NO password field)
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     role: str           # <-- RoleEnum is completely gone!
     is_active: bool
     created_at: datetime # <-- Added so your Admin Panel can see registration dates
@@ -23,6 +30,8 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    role : str
+    first_name: Optional[str] = None
 
 # 4. Password Reset Schemas
 class ForgotPassword(BaseModel):

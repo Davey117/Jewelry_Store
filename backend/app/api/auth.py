@@ -1,18 +1,20 @@
+import os
 import resend
-from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Response
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from itsdangerous import URLSafeTimedSerializer
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from pydantic import BaseModel
+from jose import jwt, JWTError, ExpiredSignatureError
 
 from app.core.database import get_db
 from app.core.security import (
     get_password_hash, 
     verify_password, 
     create_access_token,
+    create_refresh_token,
     SECRET_KEY, 
     RESEND_API_KEY, 
     GOOGLE_CLIENT_ID,
@@ -24,14 +26,31 @@ from app.schemas.user import UserCreate, UserResponse, Token, ForgotPassword, Re
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
-# Initialize Email Serializer and Resend
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 resend.api_key = RESEND_API_KEY
 
-# --- Branded Email Helper ---
+# Use environment variable for frontend URL, fallback to localhost for development
+FRONTEND_URL = os.getenv("VITE_API_BASE_URL", "http://localhost:5173")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user = db.query(User).filter(User.email == email).first()
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+class RoleUpdate(BaseModel):
+    role: str
 
 def send_branded_email(to_email: str, subject: str, title: str, body_text: str, button_text: str, button_url: str):
-    """Sends a luxury-themed HTML email via Resend"""
     html_content = f"""
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9; padding: 40px 0; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -52,16 +71,14 @@ def send_branded_email(to_email: str, subject: str, title: str, body_text: str, 
     </div>
     """
     try:
-        resend.Emails.send({{
+        resend.Emails.send({
             "from": "Aurum & Co. <onboarding@resend.dev>",
-            "to": to_email,
+            "to": [to_email],
             "subject": f"Aurum & Co. | {subject}",
             "html": html_content
-        }})
+        })
     except Exception as e:
-        print(f"Failed to send branded email: {{e}}")
-
-# --- Endpoints ---
+        print(f"Failed to send branded email: {str(e)}")
 
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -71,6 +88,10 @@ async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db:
     new_user = User(
         email=user_data.email, 
         hashed_password=get_password_hash(user_data.password),
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        phone=user_data.phone,
+        address=user_data.address,
         is_active=False,
         role="user"
     )
@@ -79,14 +100,13 @@ async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db:
     db.refresh(new_user)
 
     token = serializer.dumps(user_data.email, salt="email-confirm")
-    # Change this to your live Render URL when ready
-    verify_url = f"http://localhost:5173/verify-email?token={{token}}"
+    verify_url = f"{FRONTEND_URL}/verify-email?token={token}"
 
     background_tasks.add_task(
         send_branded_email,
         user_data.email,
         "Verify Your Account",
-        "Welcome to the Inner Circle",
+        f"Welcome, {user_data.first_name}",
         "Your journey with Aurum & Co. begins here. Please verify your email to access our exclusive collections and personalized services.",
         "Activate Account",
         verify_url
@@ -106,51 +126,106 @@ def verify_email(token: str, db: Session = Depends(get_db)):
         
     user.is_active = True
     db.commit()
-    return {{"message": "Welcome back! Your account is now active."}}
+    return {"message": "Welcome back! Your account is now active."}
 
+# 1. Update the login endpoint to accept Response injection
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Please activate your account via email before logging in.")
+        raise HTTPException(status_code=403, detail="Please activate your account via email first.")
     
-    access_token = create_access_token(data={{"sub": user.email}})
-    return {{"access_token": access_token, "token_type": "bearer"}}
+    # Generate both tokens
+    access_token = create_access_token(data={"sub": user.email})
+    refresh_token = create_refresh_token(data={"sub": user.email})
+    
+    # Set the long-lived refresh token in an HttpOnly cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,            # Strict security: completely hides cookie from client JavaScript (Blocks XSS)
+        secure=True,              # Strict enforcement: ensures browser only transmits over HTTPS
+        samesite="lax",           # CSRF safety policy mapping
+        max_age=7 * 24 * 60 * 60  # Lifetime matching: 7 days tracked in seconds
+    )
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "role": user.role, 
+        "first_name": user.first_name
+    }
 
-# --- Google OAuth ---
-
+@router.post("/refresh")
+def refresh_session(request: Request, response: Response, db: Session = Depends(get_db)):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Session signature absent.")
+        
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=["HS256"])
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Malformed token classification.")
+            
+        email: str = payload.get("sub")
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Owner reference no longer available.")
+            
+        # Re-issue a fresh 15-minute access token 
+        new_access_token = create_access_token(data={"sub": user.email})
+        return {"access_token": new_access_token, "token_type": "bearer"}
+        
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expired. Please re-authenticate.")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Compromised validation signature.")
 class GoogleToken(BaseModel):
     token: str
-
 @router.post("/google", response_model=Token)
-def google_login(data: GoogleToken, db: Session = Depends(get_db)):
+def google_login(data: GoogleToken, background_tasks: BackgroundTasks,db: Session = Depends(get_db)):
     try:
         idinfo = id_token.verify_oauth2_token(data.token, requests.Request(), GOOGLE_CLIENT_ID)
         email = idinfo['email']
 
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            user = User(email=email, hashed_password="oauth_managed", is_active=True, role="user")
+            user = User(
+                email=email, 
+                hashed_password="oauth_managed", 
+                first_name=idinfo.get('given_name', ''),
+                last_name=idinfo.get('family_name', ''),
+                is_active=True, 
+                role="user"
+            )
             db.add(user)
             db.commit()
             db.refresh(user)
+            shop_url = f"{FRONTEND_URL}/catalog"
+            background_tasks.add_task(
+                send_branded_email,
+                user.email,
+                "Welcome to the Inner Circle",
+                f"Welcome, {user.first_name}",
+                "Your journey with Aurum & Co. begins here. Thank you for joining us via Google.",
+                "Explore The Collection",
+                shop_url
+            )
 
-        access_token = create_access_token(data={{"sub": user.email}})
-        return {{"access_token": access_token, "token_type": "bearer"}}
+        access_token = create_access_token(data={"sub": user.email})
+        return {"access_token": access_token, "token_type": "bearer", "role": user.role, "first_name": user.first_name}
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid Google authentication")
-
-# --- Password Reset ---
 
 @router.post("/forgot-password")
 async def forgot_password(request: ForgotPassword, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
     if user:
         token = create_password_reset_token(email=user.email)
-        reset_url = f"http://localhost:5173/reset-password?token={{token}}"
+        reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
         
         background_tasks.add_task(
             send_branded_email,
@@ -161,7 +236,7 @@ async def forgot_password(request: ForgotPassword, background_tasks: BackgroundT
             "Reset Password",
             reset_url
         )
-    return {{"message": "If the account exists, a secure reset link has been sent."}}
+    return {"message": "If the account exists, a secure reset link has been sent."}
 
 @router.post("/reset-password")
 def reset_password(request: ResetPassword, db: Session = Depends(get_db)):
@@ -175,4 +250,45 @@ def reset_password(request: ResetPassword, db: Session = Depends(get_db)):
     
     user.hashed_password = get_password_hash(request.new_password)
     db.commit()
-    return {{"message": "Your password has been successfully updated."}}
+    return {"message": "Your password has been successfully updated."}
+
+@router.get("/users", response_model=list[UserResponse])
+def get_all_users(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not authorized. Super Admins only.")
+    return db.query(User).all()
+
+@router.put("/users/{user_id}/role")
+def update_user_role(user_id: int, request: RoleUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Not authorized. Super Admins only.")
+    
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if target_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot change your own role.")
+
+    target_user.role = request.role
+    db.commit()
+    return {"message": f"User updated to {request.role}"}
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user = db.query(User).filter(User.email == email).first()
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except ExpiredSignatureError:
+        # ✨ This tells the frontend axios interceptor to boot them out to /login
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Session expired. Please log in again."
+        )
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")

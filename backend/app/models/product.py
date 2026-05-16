@@ -1,7 +1,7 @@
-# app/models/product.py
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from datetime import datetime
 
 class Category(Base):
     __tablename__ = "categories"
@@ -20,9 +20,17 @@ class Product(Base):
     description = Column(String)
     price = Column(Float, nullable=False)
     stock_quantity = Column(Integer, default=0)
-    category_id = Column(Integer, ForeignKey("categories.id"))
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False) # ✨ Now Required!
     is_active = Column(Boolean, default=True)
-    image_url = Column(String)
+    
+    # ✨ NEW FIELDS
+    color = Column(String, default="None") # Gold, Silver, None
+    main_image_url = Column(String, nullable=True)
+    additional_images = Column(JSON, default=list) # Stores a list of extra image links
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    added_by_id = Column(Integer, ForeignKey("users.id"))
 
-    # Relationship back to the category
+    # Relationships
     category = relationship("Category", back_populates="products")
+    added_by = relationship("User")

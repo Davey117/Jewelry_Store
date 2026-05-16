@@ -1,57 +1,70 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext'; // ✨ Import the Cart Global Brain
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+  const firstName = localStorage.getItem('firstName');
   
-  // Check if a user is logged in
-  const isAuthenticated = !!localStorage.getItem('token');
+  // ✨ Pull the cart count and the drawer toggle function
+  const { cartCount, setIsCartOpen } = useCart();
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Clear the token
-    navigate('/login'); // Send them back to login
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('firstName');
+    navigate('/login');
   };
 
   return (
-    <nav className="bg-white shadow-md p-4 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto flex justify-between items-center">
+    <nav className="bg-white border-b border-gray-100 py-4 px-8 flex justify-between items-center shadow-sm sticky top-0 z-30">
+      <div className="text-2xl font-serif tracking-widest text-gray-900 uppercase">
+        <Link to="/">Aurum & Co.</Link>
+      </div>
+
+      <div className="flex items-center space-x-6 text-sm uppercase tracking-widest text-gray-600 font-bold">
+        {firstName && (
+          <span className="text-amber-600 mr-4 hidden md:inline-block">Welcome, {firstName}</span>
+        )}
         
-        {/* Brand Logo */}
-        <Link to="/" className="text-2xl font-extrabold text-indigo-600 tracking-tight">
-          Aurum<span className="text-gray-800">andCo</span>
-        </Link>
-
         {/* Navigation Links */}
-        <div className="flex items-center space-x-6 font-medium text-gray-600">
-          <Link to="/" className="hover:text-indigo-600 transition">Home</Link>
-          <Link to="/catalog" className="hover:text-indigo-600 transition">Catalog</Link>
-          
-          {/* 🛡️ ADMIN ONLY LINK (Visible if logged in) */}
-          {isAuthenticated && (
-            <Link 
-              to="/admin" 
-              className="text-rose-600 hover:text-rose-700 font-bold transition border-b-2 border-transparent hover:border-rose-600"
-            >
-              Admin Panel
-            </Link>
-          )}
+        <Link to="/" className="hover:text-amber-600 transition">Home</Link>
+        <Link to="/catalog" className="hover:text-amber-600 transition">Catalog</Link>
+        
+        {/* Auth Links */}
+        {token ? (
+          <button onClick={handleLogout} className="hover:text-amber-600 transition uppercase tracking-widest font-bold text-sm">Sign Out</button>
+        ) : (
+          <Link to="/login" className="hover:text-amber-600 transition">Sign In</Link>
+        )}
 
-          {/* 🔐 AUTH LOGIC: Show Login if out, Logout if in */}
-          {!isAuthenticated ? (
-            <Link 
-              to="/login" 
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition shadow-sm"
-            >
-              Login
-            </Link>
-          ) : (
-            <button 
-              onClick={handleLogout}
-              className="text-gray-500 hover:text-indigo-600 transition cursor-pointer"
-            >
-              Logout
-            </button>
+        {/* ✨ THE CART BUTTON (Using your original SVG!) */}
+        <button 
+          onClick={() => setIsCartOpen(true)}
+          className="relative text-gray-600 hover:text-amber-600 transition-colors p-2 focus:outline-none"
+          title="Your Bag"
+        >
+          <svg 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            viewBox="0 0 24 24" 
+            className="w-6 h-6"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" 
+            />
+          </svg>
+
+          {/* ✨ Dynamic Cart Badge */}
+          {cartCount > 0 && (
+            <span className="absolute top-0 right-0 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-amber-600 rounded-full transform translate-x-1 translate-y-1 shadow-sm">
+              {cartCount}
+            </span>
           )}
-        </div>
+        </button>
 
       </div>
     </nav>
