@@ -22,3 +22,4 @@ requests>=2.31.0
 python-multipart==0.0.27
 email-validator==2.3.0
 pydantic==2.13.3
+cloudinary
