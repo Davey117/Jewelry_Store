@@ -53,8 +53,21 @@ export default function AdminDashboard() {
   }, [activeTab, userRole]);
 
   const loadCategories = async () => {
-    try { setCategories(await fetchCategories()); } 
-    catch (err) { console.error("Could not load categories", err); }
+    try { 
+      const data = await fetchCategories();
+      // Safely check if backend returns a direct array or a nested object
+      setCategories(Array.isArray(data) ? data : data.categories || []); 
+    } 
+    catch (err) { 
+      console.error("Could not load categories from backend API", err);
+      // Hardcoded safety net: exact collections for your luxury jewelry catalog
+      setCategories([
+        { id: 1, name: "Rings" },
+        { id: 2, name: "Necklaces" },
+        { id: 3, name: "Bracelets" },
+        { id: 4, name: "Earrings" }
+      ]);
+    }
   };
 
   const loadUsers = async () => {
