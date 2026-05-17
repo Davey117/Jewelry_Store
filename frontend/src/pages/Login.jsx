@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
-import { loginUser, registerUser } from '../services/api';
+import { loginUser, registerUser, loginWithGoogle, forgotPassword } from '../services/api';
 
 export default function Login() {
   const [view, setView] = useState('login'); 
@@ -41,21 +40,19 @@ export default function Login() {
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/google`, {
-        token: credentialResponse.credential
-      });
+      const data = await loginWithGoogle(credentialResponse.credential);
       
-      localStorage.setItem('token', res.data.access_token);
-      localStorage.setItem('userRole', res.data.role); 
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('userRole', data.role); 
       
       // ✨ FIX: Properly save all details with fallbacks for Google Login
-      if(res.data.first_name) {
-        localStorage.setItem('firstName', res.data.first_name || '');
-        localStorage.setItem('lastName', res.data.last_name || '');
-        localStorage.setItem('email', res.data.email || '');
+      if (data.first_name) {
+        localStorage.setItem('firstName', data.first_name || '');
+        localStorage.setItem('lastName', data.last_name || '');
+        localStorage.setItem('email', data.email || '');
       }
 
-      if (res.data.role === 'admin' || res.data.role === 'superadmin') {
+      if (data.role === 'admin' || data.role === 'superadmin') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/', { replace: true }); 
@@ -89,7 +86,7 @@ export default function Login() {
         localStorage.setItem('userRole', data.role); 
         
         // ✨ FIX: Properly save all details with fallbacks for Standard Login
-        if(data.first_name) {
+        if (data.first_name) {
           localStorage.setItem('firstName', data.first_name || '');
           localStorage.setItem('lastName', data.last_name || ''); 
           localStorage.setItem('email', data.email || cleanEmail);
@@ -120,7 +117,7 @@ export default function Login() {
         setPhone('');
         setAddress('');
       } else if (view === 'forgot') {
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/forgot-password`, { email: cleanEmail });
+        await forgotPassword(cleanEmail);
         setMessage("If an account exists, a reset link has been sent to your email.");
         setView('login');
       }
@@ -183,7 +180,7 @@ export default function Login() {
                 <input 
                   type="tel" 
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => e.target.value}
                   className="w-full px-4 py-2 border border-gray-200 rounded focus:ring-1 focus:ring-amber-500 outline-none transition"
                 />
               </div>
