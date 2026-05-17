@@ -233,11 +233,25 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <select required value={newProduct.category_id} onChange={e => setNewProduct({...newProduct, category_id: e.target.value})} className="px-3 py-2 border rounded text-sm bg-white">
+                  <select 
+                    required 
+                    value={newProduct.category_id} 
+                    onChange={e => setNewProduct({...newProduct, category_id: e.target.value})} 
+                    className="px-3 py-2 border rounded text-sm bg-white"
+                  >
                     <option value="">Select Category</option>
-                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    <option value="1">Rings</option>
+                    <option value="2">Necklaces</option>
+                    <option value="3">Bracelets</option>
+                    <option value="4">Earrings</option>
                   </select>
-                  <select required value={newProduct.color} onChange={e => setNewProduct({...newProduct, color: e.target.value})} className="px-3 py-2 border rounded text-sm bg-white">
+
+                  <select 
+                    required 
+                    value={newProduct.color} 
+                    onChange={e => setNewProduct({...newProduct, color: e.target.value})} 
+                    className="px-3 py-2 border rounded text-sm bg-white"
+                  >
                     <option value="None">Material: None</option>
                     <option value="Gold">Gold</option>
                     <option value="Silver">Silver</option>
