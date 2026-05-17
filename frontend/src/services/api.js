@@ -109,10 +109,9 @@ export const loginUser = async (email, password) => {
     formData.append('username', email);
     formData.append('password', password);
 
-    // Bypassing the apiClient to prevent old, invalid bearer tokens from contaminating raw login requests
     const response = await axios.post(`${API_URL}/auth/login`, formData, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      withCredentials: true // Imperative for accepting incoming 'Set-Cookie' header directives
+      withCredentials: true
     });
     
     return response.data;
@@ -161,7 +160,7 @@ export const fetchAdminProducts = async () => {
 export const createProduct = async (formData) => {
   const response = await apiClient.post(`${API_URL}/products/`, formData, {
     headers: { 
-      'Content-Type': 'multipart/form-data' // Retained to ensure clean data parsing for file binaries
+      'Content-Type': 'multipart/form-data'
     }
   });
   return response.data;
