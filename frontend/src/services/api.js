@@ -171,6 +171,11 @@ export const updateProduct = async (productId, updateData) => {
   return response.data;
 };
 
+export const deleteProduct = async (productId) => {
+  const response = await apiClient.delete(`${API_URL}/products/${productId}`);
+  return response.data;
+};
+
 // --- ORDER SERVICES ---
 
 export const createOrder = async (orderData) => {
@@ -187,3 +192,4 @@ export const updateOrderStatus = async (orderId, status) => {
   const response = await apiClient.patch(`${API_URL}/orders/${orderId}/status`, { status });
   return response.data;
 };
+

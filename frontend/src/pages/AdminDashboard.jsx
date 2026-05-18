@@ -8,7 +8,8 @@ import {
   fetchCategories, 
   fetchAdminOrders, 
   updateOrderStatus, 
-  updateProduct 
+  updateProduct,
+  deleteProduct // 🌟 Imported delete service function
 } from '../services/api';
 
 export default function AdminDashboard() {
@@ -37,9 +38,10 @@ export default function AdminDashboard() {
     image_2: null, image_3: null, image_4: null 
   });
 
-  // --- EDITING STATE ---
+  // --- EDITING & DELETING STATE ---
   const [editingProduct, setEditingProduct] = useState(null);
   const [editStock, setEditStock] = useState("");
+  const [deletingProduct, setDeletingProduct] = useState(null); // 🌟 Tracks product selected for deletion
 
   const userRole = localStorage.getItem('userRole') || 'user';
   const firstName = localStorage.getItem('firstName') || 'Executive'; 
@@ -55,12 +57,10 @@ export default function AdminDashboard() {
   const loadCategories = async () => {
     try { 
       const data = await fetchCategories();
-      // Safely check if backend returns a direct array or a nested object
       setCategories(Array.isArray(data) ? data : data.categories || []); 
     } 
     catch (err) { 
       console.error("Could not load categories from backend API", err);
-      // Hardcoded safety net: exact collections for your luxury jewelry catalog
       setCategories([
         { id: 1, name: "Rings" },
         { id: 2, name: "Necklaces" },
@@ -112,7 +112,6 @@ export default function AdminDashboard() {
     formData.append('color', newProduct.color);
     formData.append('main_image', newProduct.main_image);
     
-    // Cloudinary expects all images under the same key for a List[UploadFile]
     formData.append('images', newProduct.main_image);
     if (newProduct.image_2) formData.append('images', newProduct.image_2);
     if (newProduct.image_3) formData.append('images', newProduct.image_3);
@@ -120,12 +119,10 @@ export default function AdminDashboard() {
 
     try {
       await createProduct(formData);
-      // Reset Form State
       setNewProduct({ name: '', description: '', price: '', stock_quantity: '', category_id: '', color: 'None', main_image: null, image_2: null, image_3: null, image_4: null });
       setShowAddProduct(false);
       loadProducts(); 
     } catch (err) {
-      // SAFE ERROR HANDLING: Prevents the React "Objects are not valid" crash
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
          setFormError(`${detail[0].loc[1]}: ${detail[0].msg}`);
@@ -144,6 +141,16 @@ export default function AdminDashboard() {
       setEditingProduct(null); 
       loadProducts(); 
     } catch (err) { alert("Failed to update inventory."); }
+  };
+
+  const handleDeleteProduct = async () => {
+    try {
+      await deleteProduct(deletingProduct.id);
+      setDeletingProduct(null);
+      loadProducts(); // Fresh reload to reflect the removed database entry
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to purge item from the repository database.");
+    }
   };
 
   const handleStatusChange = async (orderId, newStatus) => {
@@ -306,7 +313,16 @@ export default function AdminDashboard() {
                         <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${p.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {p.stock_quantity > 0 ? `${p.stock_quantity} units` : 'Void'}
                         </span>
-                        <button onClick={() => {setEditingProduct(p); setEditStock(p.stock_quantity);}} className="block text-[10px] text-amber-600 font-bold hover:underline mt-1">RESTOCK</button>
+                        <div className="flex flex-col gap-1 mt-1">
+                          <button onClick={() => {setEditingProduct(p); setEditStock(p.stock_quantity);}} className="text-left text-[10px] text-amber-600 font-bold hover:underline">RESTOCK</button>
+                          
+                          {/* 🌟 PRIVILEGE SCOPED REMOVAL ACTION (Superadmin access condition rule) */}
+                          {userRole === 'superadmin' && (
+                            <button onClick={() => setDeletingProduct(p)} className="text-left text-[10px] text-red-600 font-bold hover:underline uppercase tracking-wider">
+                              Delete Product
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-right text-xs text-gray-400 italic">{p.added_by_name}</td>
                     </tr>
@@ -408,6 +424,33 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* 🌟 DELETE CONFIRMATION MODAL OVERLAY */}
+      {deletingProduct && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl text-center border border-gray-100">
+            <h2 className="text-lg font-serif uppercase tracking-widest mb-3 text-red-600">Delete product permanently?</h2>
+            <p className="text-xs text-gray-500 leading-relaxed mb-6">
+              Are you sure you want to completely erase <span className="font-bold text-gray-900">"{deletingProduct.name}"</span>? This action cannot be undone.
+            </p>
+            <div className="flex space-x-4">
+              <button 
+                onClick={() => setDeletingProduct(null)} 
+                className="flex-1 py-3 border border-gray-200 rounded text-[10px] uppercase font-bold tracking-wider text-gray-600 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteProduct} 
+                className="flex-1 py-3 bg-red-600 text-white rounded text-[10px] uppercase font-bold tracking-wider shadow-md hover:bg-red-700 transition"
+              >
+                Proceed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
