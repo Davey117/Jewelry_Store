@@ -19,7 +19,6 @@ export default function Home() {
     const loadFeatured = async () => {
       try {
         const data = await fetchPublicProducts();
-        // Grab the first 3 for the "New Arrivals" section
         setFeaturedProducts(data.slice(0, 3)); 
       } catch (error) {
         console.error("Failed to load featured products", error);
@@ -61,10 +60,9 @@ export default function Home() {
           <div className="w-12 h-0.5 bg-amber-600 mx-auto"></div>
         </div>
         
-        {/* Adjusted grid to 4 columns for Rings, Necklaces, Watches, and Earrings */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           
-          {/* Category 1: Rings (ID: 1) */}
+          {/* Category 1: Rings (ID: 4) */}
           <Link to="/catalog?category=4" className="group relative h-96 overflow-hidden bg-gray-100">
             <img src="https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=2070&auto=format&fit=crop" alt="Rings" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
@@ -82,7 +80,7 @@ export default function Home() {
             </div>
           </Link>
 
-          {/* Category 3: Timepieces (ID: 3) */}
+          {/* Category 3: Timepieces (ID: 1) */}
           <Link to="/catalog?category=1" className="group relative h-96 overflow-hidden bg-gray-100">
             <img src="https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=2080&auto=format&fit=crop" alt="Watches" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
@@ -91,7 +89,7 @@ export default function Home() {
             </div>
           </Link>
 
-          {/* Category 4: Earrings (ID: 4) */}
+          {/* Category 4: Earrings (ID: 3) */}
           <Link to="/catalog?category=3" className="group relative h-96 overflow-hidden bg-gray-100">
             <img src="https://images.unsplash.com/photo-1635767798638-3e25273a8236?q=80&w=2070&auto=format&fit=crop" alt="Earrings" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
@@ -104,7 +102,7 @@ export default function Home() {
       </div>
 
       {/* --- NEW ARRIVALS --- */}
-      <div className="bg-gray-50 py-24 px-8">
+      <div className="bg-gray-50 py-12 md:py-24 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-end mb-16">
             <div>
@@ -131,7 +129,9 @@ export default function Home() {
                   </div>
                   <div className="text-center">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2 group-hover:text-amber-600 transition">{product.name}</h3>
-                    <p className="text-sm font-serif italic text-gray-500">${product.price.toFixed(2)}</p>
+                    <p className="text-sm font-serif italic text-gray-500">
+                      ${product.price ? Number(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                    </p>
                   </div>
                 </Link>
               ))}
@@ -141,7 +141,7 @@ export default function Home() {
       </div>
 
       {/* --- FOOTER BANNER --- */}
-      <div className="bg-black py-20 px-8 text-center">
+      <div className="bg-black py-20 px-4 md:px-8 text-center">
         <h2 className="text-2xl font-serif text-white tracking-widest uppercase mb-6">Join The Inner Circle</h2>
         
         {subscribed ? (
@@ -169,3 +169,7 @@ export default function Home() {
           </>
         )}
       </div>
+
+    </div>
+  );
+}
