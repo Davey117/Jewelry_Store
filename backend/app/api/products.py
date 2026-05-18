@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.product import Product, Category
@@ -68,6 +68,27 @@ async def create_product(
         **new_product.__dict__,
         "added_by_name": f"{current_user.first_name} {current_user.last_name}"
     }
+
+@router.delete("/{product_id}")
+def delete_product(
+    product_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user) # Matches your current auth dependency name
+):
+    # 🔐 Backend Safeguard: Double-verify the user is a superadmin
+    if current_user.role != "superadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Administrative clearance level insufficient."
+        )
+        
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found in archive.")
+        
+    db.delete(product)
+    db.commit()
+    return {"detail": "Product successfully purged from collection."}
 
 # --- REMAINING GET/PATCH ROUTES STAY THE SAME ---
 
