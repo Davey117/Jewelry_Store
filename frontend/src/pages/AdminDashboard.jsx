@@ -182,10 +182,10 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex h-[85vh] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden mt-8 relative text-gray-900">
+    <div className="flex flex-col lg:flex-row min-h-screen lg:h-[85vh] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden mt-4 lg:mt-8 relative text-gray-900">
       
       {/* --- SIDEBAR --- */}
-      <div className={`bg-black text-white flex flex-col transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+      <div className={`bg-black text-white flex flex-col transition-all duration-300 w-full lg:w-64 ${isCollapsed ? 'lg:w-20' : 'lg:w-64'}`}>
         <div className="h-20 flex items-center justify-between px-4 border-b border-gray-800">
           {!isCollapsed && <h2 className="text-xl font-serif tracking-widest uppercase text-amber-500 whitespace-nowrap">Aurum</h2>}
           <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-2 text-gray-400 hover:text-white">
@@ -193,21 +193,21 @@ export default function AdminDashboard() {
           </button>
         </div>
         
-        <nav className="flex-1 py-6 px-3 space-y-3">
+        <nav className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible py-3 lg:py-6 px-3 gap-2 lg:space-y-3 scrollbar-none">
           <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center px-3 py-3 rounded text-sm tracking-wide uppercase transition-colors ${activeTab === 'inventory' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-900'}`}>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" strokeWidth="2"></path></svg>
-            {!isCollapsed && <span className="ml-4">Inventory</span>}
+            <span className={`ml-4 ${isCollapsed ? 'lg:hidden' : 'lg:block'}`}>Inventory</span>
           </button>
           
           <button onClick={() => setActiveTab('orders')} className={`w-full flex items-center px-3 py-3 rounded text-sm tracking-wide uppercase transition-colors ${activeTab === 'orders' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-900'}`}>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" strokeWidth="2"></path></svg>
-            {!isCollapsed && <span className="ml-4">Orders</span>}
+            <span className={`ml-4 ${isCollapsed ? 'lg:hidden' : 'lg:block'}`}>Orders</span>
           </button>
           
           {userRole === "superadmin" && (
             <button onClick={() => setActiveTab('team')} className={`w-full flex items-center px-3 py-3 rounded text-sm tracking-wide uppercase transition-colors ${activeTab === 'team' ? 'bg-amber-600 text-white shadow-lg' : 'text-gray-400 hover:bg-gray-900'}`}>
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1z" strokeWidth="2"></path></svg>
-              {!isCollapsed && <span className="ml-4">Team Access</span>}
+              <span className={`ml-4 ${isCollapsed ? 'lg:hidden' : 'lg:block'}`}>Team Access</span>
             </button>
           )}
         </nav>
@@ -242,12 +242,12 @@ export default function AdminDashboard() {
               <form onSubmit={handleAddProduct} className="mb-8 bg-gray-50 p-6 rounded border border-gray-200">
                 {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs font-bold rounded border border-red-200">Error: {formError}</div>}
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <input type="text" required value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="px-3 py-2 border rounded text-sm" placeholder="Product Name" />
                   <input type="number" step="0.01" required value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className="px-3 py-2 border rounded text-sm" placeholder="Price ($)" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <select 
                     required 
                     value={newProduct.category_id} 
@@ -314,8 +314,8 @@ export default function AdminDashboard() {
               </form>
             )}
 
-            <div className="overflow-hidden border rounded bg-gray-50">
-              <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto border rounded bg-gray-50 w-full scrollbar-thin">
+              <table className="w-full min-w-[750px] text-left text-sm border-collapse">
                 <thead className="bg-gray-100 text-xs font-bold uppercase text-gray-700">
                   <tr><th className="px-4 py-3">Item</th><th className="px-4 py-3">Details</th><th className="px-4 py-3">Price</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Added By</th></tr>
                 </thead>

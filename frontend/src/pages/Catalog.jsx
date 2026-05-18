@@ -64,10 +64,10 @@ export default function Catalog() {
             Collections
           </h2>
           
-          <nav className="space-y-4">
+          <nav className="flex flex-row md:flex-col overflow-x-auto md:overflow-visible gap-4 md:space-y-4 pb-4 md:pb-0 scrollbar-none">
             <button 
               onClick={() => handleCategoryClick(null)}
-              className={`block text-xs uppercase tracking-widest transition-colors ${!selectedCategory ? 'text-amber-600 font-bold' : 'text-gray-500 hover:text-black'}`}
+              className={`text-xs uppercase tracking-widest transition-colors whitespace-nowrap ${!selectedCategory ? 'text-amber-600 font-bold' : 'text-gray-500 hover:text-black'}`}
             >
               All Collections
             </button>
@@ -76,14 +76,14 @@ export default function Catalog() {
               <button
                 key={cat.id}
                 onClick={() => handleCategoryClick(cat.id)}
-                className={`block text-xs uppercase tracking-widest text-left transition-colors ${selectedCategory === cat.id ? 'text-amber-600 font-bold' : 'text-gray-500 hover:text-black'}`}
+                className={`text-xs uppercase tracking-widest text-left transition-colors whitespace-nowrap ${selectedCategory === cat.id ? 'text-amber-600 font-bold' : 'text-gray-500 hover:text-black'}`}
               >
                 {cat.name}
               </button>
             ))}
           </nav>
 
-          <div className="mt-12 pt-8 border-t border-gray-100">
+          <div className="mt-12 pt-8 border-t border-gray-100 hidden md:block">
              <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 mb-6">Material Quality</h2>
              <div className="space-y-3 text-[10px] uppercase tracking-widest text-gray-500">
                 <p className="hover:text-amber-600 cursor-pointer transition italic">18K Solid Gold</p>
@@ -95,7 +95,7 @@ export default function Catalog() {
 
         {/* --- PRODUCT GRID --- */}
         <main className="flex-1">
-          <div className="flex justify-between items-baseline mb-10">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-baseline gap-2 mb-10">
             <h1 className="text-2xl font-serif uppercase tracking-widest text-gray-900">
               {selectedCategory 
                 ? categories.find(c => c.id === selectedCategory)?.name || 'Collection' 

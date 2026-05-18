@@ -62,7 +62,7 @@ export default function ProductPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-16 md:py-24">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-24">
       
       {/* Breadcrumbs */}
       <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-12">
@@ -73,7 +73,7 @@ export default function ProductPage() {
         <span className="text-black font-bold">{product.name}</span>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-16">
+      <div className="flex flex-col md:flex-row gap-8 md:gap-16">
         
         {/* LEFT COLUMN: IMAGE GALLERY WITH INTERACTIVE TOGGLES */}
         <div className="w-full md:w-1/2 flex flex-col-reverse md:flex-row gap-4">
@@ -131,7 +131,7 @@ export default function ProductPage() {
              {product.color !== "None" && <span className="text-[10px] border border-gray-200 text-gray-600 px-3 py-1 uppercase tracking-widest font-bold">{product.color}</span>}
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-serif text-gray-900 mb-6 leading-tight uppercase tracking-wide">{product.name}</h1>
+          <h1 className="text-2xl md:text-5xl font-serif text-gray-900 mb-4 md:mb-6 leading-tight uppercase tracking-wide">{product.name}</h1>
           <p className="text-2xl font-bold text-gray-900 tracking-wider mb-8">${product.price.toFixed(2)}</p>
           
           <div className="w-full h-px bg-gray-200 mb-8"></div>

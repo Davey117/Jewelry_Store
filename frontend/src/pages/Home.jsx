@@ -5,6 +5,15 @@ import { fetchPublicProducts } from '../services/api';
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    if (email.trim()) {
+      setSubscribed(true);
+    }
+  };
 
   useEffect(() => {
     const loadFeatured = async () => {
@@ -46,7 +55,7 @@ export default function Home() {
       </div>
 
       {/* --- SHOP BY CATEGORY --- */}
-      <div className="py-24 px-8 max-w-7xl mx-auto">
+      <div className="py-12 md:py-24 px-4 md:px-8 max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-serif text-gray-900 tracking-widest uppercase mb-4">Shop By Category</h2>
           <div className="w-12 h-0.5 bg-amber-600 mx-auto"></div>
@@ -134,17 +143,29 @@ export default function Home() {
       {/* --- FOOTER BANNER --- */}
       <div className="bg-black py-20 px-8 text-center">
         <h2 className="text-2xl font-serif text-white tracking-widest uppercase mb-6">Join The Inner Circle</h2>
-        <p className="text-gray-400 text-[10px] tracking-widest uppercase mb-8 max-w-md mx-auto leading-relaxed">
-          Subscribe to receive exclusive access to private sales and new collections.
-        </p>
-        <div className="flex max-w-md mx-auto">
-          <input type="email" placeholder="YOUR EMAIL ADDRESS" className="flex-1 bg-transparent border border-gray-700 text-white px-4 py-3 text-[10px] tracking-widest outline-none focus:border-amber-500 transition" />
-          <button className="bg-amber-600 text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-amber-700 transition">
-            Subscribe
-          </button>
-        </div>
+        
+        {subscribed ? (
+          <p className="text-amber-500 font-serif italic text-sm tracking-widest uppercase py-4 animate-fadeIn">
+            Thanks for subscribing to our exclusive newsletter.
+          </p>
+        ) : (
+          <>
+            <p className="text-gray-400 text-[10px] tracking-widest uppercase mb-8 max-w-md mx-auto leading-relaxed">
+              Subscribe to receive exclusive access to private sales and new collections.
+            </p>
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row max-w-md mx-auto gap-3 sm:gap-0">
+              <input 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="YOUR EMAIL ADDRESS" 
+                className="flex-1 bg-transparent border border-gray-700 text-white px-4 py-3 text-[10px] tracking-widest outline-none focus:border-amber-500 transition w-full" 
+              />
+              <button type="submit" className="bg-amber-600 text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-amber-700 transition w-full sm:w-auto shrink-0">
+                Subscribe
+              </button>
+            </form>
+          </>
+        )}
       </div>
-
-    </div>
-  );
-}
