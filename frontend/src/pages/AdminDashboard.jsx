@@ -9,7 +9,7 @@ import {
   fetchAdminOrders, 
   updateOrderStatus, 
   updateProduct,
-  deleteProduct // 🌟 Imported delete service function
+  deleteProduct 
 } from '../services/api';
 
 export default function AdminDashboard() {
@@ -39,9 +39,8 @@ export default function AdminDashboard() {
   });
 
   // --- EDITING & DELETING STATE ---
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [editStock, setEditStock] = useState("");
-  const [deletingProduct, setDeletingProduct] = useState(null); // 🌟 Tracks product selected for deletion
+  const [editingProduct, setEditingProduct] = useState(null); // 🌟 Tracks product details form modification target
+  const [deletingProduct, setDeletingProduct] = useState(null); 
 
   const userRole = localStorage.getItem('userRole') || 'user';
   const firstName = localStorage.getItem('firstName') || 'Executive'; 
@@ -62,10 +61,10 @@ export default function AdminDashboard() {
     catch (err) { 
       console.error("Could not load categories from backend API", err);
       setCategories([
-        { id: 1, name: "Rings" },
+        { id: 1, name: "Watches" },
         { id: 2, name: "Necklaces" },
-        { id: 3, name: "Bracelets" },
-        { id: 4, name: "Earrings" }
+        { id: 3, name: "Earrings" },
+        { id: 4, name: "Rings" }
       ]);
     }
   };
@@ -134,22 +133,31 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUpdateStock = async (e) => {
+  const handleUpdateProductDetails = async (e) => {
     e.preventDefault();
     try {
-      await updateProduct(editingProduct.id, { stock_quantity: parseInt(editStock) });
+      await updateProduct(editingProduct.id, {
+        name: editingProduct.name,
+        price: parseFloat(editingProduct.price),
+        stock_quantity: parseInt(editingProduct.stock_quantity),
+        category_id: parseInt(editingProduct.category_id),
+        color: editingProduct.color,
+        description: editingProduct.description
+      });
       setEditingProduct(null); 
       loadProducts(); 
-    } catch (err) { alert("Failed to update inventory."); }
+    } catch (err) { 
+      alert("Failed to modify compilation entry parameters."); 
+    }
   };
 
   const handleDeleteProduct = async () => {
     try {
       await deleteProduct(deletingProduct.id);
       setDeletingProduct(null);
-      loadProducts(); // Fresh reload to reflect the removed database entry
+      loadProducts(); 
     } catch (err) {
-      alert(err.response?.data?.detail || "Failed to purge item from the repository database.");
+      alert(err.response?.data?.detail || "Failed to purge item from repository.");
     }
   };
 
@@ -267,15 +275,31 @@ export default function AdminDashboard() {
 
                 <textarea required value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full px-3 py-2 border rounded text-sm mb-4 h-20" placeholder="Product Details..."></textarea>
 
+                {/* 🌟 MAIN UPLOAD CANVAS LIVE PREVIEW OVERLAY */}
                 <div className="mb-4 p-4 border border-dashed border-amber-300 bg-amber-50 rounded text-center">
                   <p className="text-[10px] font-bold text-amber-900 mb-2 uppercase">Main Image (Required)</p>
+                  {newProduct.main_image && (
+                    <img 
+                      src={URL.createObjectURL(newProduct.main_image)} 
+                      className="w-24 h-28 object-cover mx-auto mb-3 rounded shadow-sm border border-amber-200" 
+                      alt="Primary canvas generation preview" 
+                    />
+                  )}
                   <input type="file" accept="image/*" required onChange={e => setNewProduct({...newProduct, main_image: e.target.files[0]})} className="text-xs" />
                 </div>
 
+                {/* 🌟 ADDITIONAL ASSETS LIVE PREVIEWS */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   {[2, 3, 4].map(num => (
-                    <div key={num} className="border p-2 bg-white rounded">
+                    <div key={num} className="border p-2 bg-white rounded text-center">
                       <p className="text-[8px] uppercase text-gray-400 mb-1">Extra {num-1}</p>
+                      {newProduct[`image_${num}`] && (
+                        <img 
+                          src={URL.createObjectURL(newProduct[`image_${num}`])} 
+                          className="w-12 h-16 object-cover mx-auto mb-1 rounded border shadow-sm" 
+                          alt="Extra view asset preview" 
+                        />
+                      )}
                       <input type="file" accept="image/*" onChange={e => setNewProduct({...newProduct, [`image_${num}`]: e.target.files[0]})} className="text-[8px] w-full" />
                     </div>
                   ))}
@@ -304,21 +328,34 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex space-x-2">
-                           {p.category && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">{p.category.name}</span>}
+                           {p.category_id === 1 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Watches</span>}
+                           {p.category_id === 2 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Necklaces</span>}
+                           {p.category_id === 3 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Earrings</span>}
+                           {p.category_id === 4 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Rings</span>}
                            {p.color !== "None" && <span className={`text-[10px] px-2 py-0.5 rounded border uppercase ${p.color === 'Gold' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600'}`}>{p.color}</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-4 font-bold">${p.price}</td>
+                      
+                      {/* 🌟 AUTOMATIC THOUSAND-SEPARATOR SYSTEM */}
+                      <td className="px-4 py-4 font-bold">
+                        ${Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      
                       <td className="px-4 py-4">
                         <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${p.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {p.stock_quantity > 0 ? `${p.stock_quantity} units` : 'Void'}
                         </span>
-                        <div className="flex flex-col gap-1 mt-1">
-                          <button onClick={() => {setEditingProduct(p); setEditStock(p.stock_quantity);}} className="text-left text-[10px] text-amber-600 font-bold hover:underline">RESTOCK</button>
+                        <div className="flex flex-col gap-1 mt-2">
+                          {/* 🌟 EDIT LINK ACCESSIBLE TO BOTH ROLES */}
+                          {(userRole === 'admin' || userRole === 'superadmin') && (
+                            <button onClick={() => setEditingProduct(p)} className="text-left text-[10px] text-amber-600 font-bold hover:underline uppercase tracking-wide">
+                              Edit Product
+                            </button>
+                          )}
                           
-                          {/* 🌟 PRIVILEGE SCOPED REMOVAL ACTION (Superadmin access condition rule) */}
+                          {/* 🌟 EXCLUSIVE REMOVAL LINK FOR SUPERADMIN ONLY */}
                           {userRole === 'superadmin' && (
-                            <button onClick={() => setDeletingProduct(p)} className="text-left text-[10px] text-red-600 font-bold hover:underline uppercase tracking-wider">
+                            <button onClick={() => setDeletingProduct(p)} className="text-left text-[10px] text-red-600 font-bold hover:underline uppercase tracking-wide mt-0.5">
                               Delete Product
                             </button>
                           )}
@@ -411,39 +448,80 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* STOCK UPDATE MODAL */}
+      {/* 🌟 COMPREHENSIVE PRODUCT FORM MODIFICATION MODAL OVERLAY */}
       {editingProduct && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl">
-            <h2 className="text-xl font-serif uppercase tracking-widest mb-4">Inventory Adjustment</h2>
-            <input type="number" value={editStock} onChange={(e) => setEditStock(e.target.value)} className="w-full p-4 border rounded-lg mb-6 text-2xl font-bold text-center outline-amber-600" />
-            <div className="flex space-x-4">
-              <button onClick={() => setEditingProduct(null)} className="flex-1 py-3 border rounded text-xs uppercase font-bold">Abort</button>
-              <button onClick={handleUpdateStock} className="flex-1 py-3 bg-black text-white rounded text-xs uppercase font-bold shadow-lg">Save Changes</button>
+          <form onSubmit={handleUpdateProductDetails} className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 className="text-lg font-serif uppercase tracking-widest mb-6 border-b pb-2 text-amber-600">Modify Piece Information</h2>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Product Title</label>
+                <input type="text" required value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full px-3 py-2 border rounded text-sm outline-none" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Price Value ($)</label>
+                  <input type="number" step="0.01" required value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full px-3 py-2 border rounded text-sm outline-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Available Units</label>
+                  <input type="number" required value={editingProduct.stock_quantity} onChange={e => setEditingProduct({...editingProduct, stock_quantity: e.target.value})} className="w-full px-3 py-2 border rounded text-sm outline-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Collection Category</label>
+                  <select required value={editingProduct.category_id} onChange={e => setEditingProduct({...editingProduct, category_id: e.target.value})} className="w-full px-3 py-2 border rounded text-sm bg-white outline-none">
+                    <option value="4">Rings</option>
+                    <option value="2">Necklaces</option>
+                    <option value="1">Watches</option>
+                    <option value="3">Earrings</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Material Classification</label>
+                  <select required value={editingProduct.color} onChange={e => setEditingProduct({...editingProduct, color: e.target.value})} className="w-full px-3 py-2 border rounded text-sm bg-white outline-none">
+                    <option value="None">Material: None</option>
+                    <option value="Gold">Gold</option>
+                    <option value="Silver">Silver</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Artisanal Details & Specifications</label>
+                <textarea required value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full px-3 py-2 border rounded text-sm h-24 outline-none resize-none"></textarea>
+              </div>
             </div>
-          </div>
+
+            <div className="flex space-x-4">
+              <button type="button" onClick={() => setEditingProduct(null)} className="flex-1 py-3 border rounded text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" className="flex-1 py-3 bg-black text-white rounded text-[10px] font-bold uppercase tracking-wider hover:bg-amber-600 transition shadow-md">
+                Save Changes
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* 🌟 DELETE CONFIRMATION MODAL OVERLAY */}
+      {/* DELETE CONFIRMATION MODAL OVERLAY */}
       {deletingProduct && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl text-center border border-gray-100">
             <h2 className="text-lg font-serif uppercase tracking-widest mb-3 text-red-600">Delete product permanently?</h2>
             <p className="text-xs text-gray-500 leading-relaxed mb-6">
               Are you sure you want to completely erase <span className="font-bold text-gray-900">"{deletingProduct.name}"</span>? This action cannot be undone.
             </p>
             <div className="flex space-x-4">
-              <button 
-                onClick={() => setDeletingProduct(null)} 
-                className="flex-1 py-3 border border-gray-200 rounded text-[10px] uppercase font-bold tracking-wider text-gray-600 hover:bg-gray-50 transition"
-              >
+              <button onClick={() => setDeletingProduct(null)} className="flex-1 py-3 border border-gray-200 rounded text-[10px] uppercase font-bold tracking-wider text-gray-600 hover:bg-gray-50 transition">
                 Cancel
               </button>
-              <button 
-                onClick={handleDeleteProduct} 
-                className="flex-1 py-3 bg-red-600 text-white rounded text-[10px] uppercase font-bold tracking-wider shadow-md hover:bg-red-700 transition"
-              >
+              <button onClick={handleDeleteProduct} className="flex-1 py-3 bg-red-600 text-white rounded text-[10px] uppercase font-bold tracking-wider shadow-md hover:bg-red-700 transition">
                 Proceed
               </button>
             </div>
