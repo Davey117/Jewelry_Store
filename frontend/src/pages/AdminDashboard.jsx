@@ -240,10 +240,10 @@ export default function AdminDashboard() {
                     className="px-3 py-2 border rounded text-sm bg-white"
                   >
                     <option value="">Select Category</option>
-                    <option value="1">Rings</option>
+                    <option value="4">Rings</option>
                     <option value="2">Necklaces</option>
-                    <option value="3">Bracelets</option>
-                    <option value="4">Earrings</option>
+                    <option value="1">Watches</option>
+                    <option value="3">Earrings</option>
                   </select>
 
                   <select 
