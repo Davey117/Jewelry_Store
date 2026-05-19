@@ -5,11 +5,38 @@ from typing import List
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models.user import User 
-from app.schemas.user import UserResponse
+from app.models.user import User
+from app.models.order import Order
+from app.api.auth import get_current_user
+from app.schemas.user import UserResponse, UserProfileUpdate, UserProfileResponse
 from app.api.deps import get_super_admin_user 
 
 router = APIRouter(prefix="/api/users", tags=["Admin User Management"])
+
+@router.get("/profile", response_model=UserProfileResponse)
+def get_user_profile(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.patch("/profile", response_model=UserProfileResponse)
+def update_user_profile(
+    profile_update: UserProfileUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    update_data = profile_update.dict(exclude_unset=True)
+    
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+        
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+@router.get("/orders", response_model=list) # Replace list with your OrderResponse schema if you have one
+def get_user_order_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Assuming your Order model tracks user entries via user_id
+    orders = db.query(Order).filter(Order.user_id == current_user.id).order_by(Order.created_at.desc()).all()
+    return orders
 
 # 1. A small schema just for receiving the new role from the frontend
 class RoleUpdateRequest(BaseModel):

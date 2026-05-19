@@ -417,10 +417,10 @@ export default function AdminDashboard() {
 
         {/* TEAM SECTION */}
         {activeTab === 'team' && userRole === "superadmin" && (
-           <div className="bg-white p-6 rounded-lg shadow-sm border border-amber-200">
-            <h3 className="text-sm font-bold text-gray-700 uppercase mb-6">Admin Access Control</h3>
-            <div className="overflow-hidden border rounded bg-gray-50">
-               <table className="w-full text-left text-sm">
+           <div className="bg-white p-4 lg:p-6 rounded-lg shadow-sm border border-amber-200">
+            <h3 className="text-xs lg:text-sm font-bold text-gray-700 uppercase mb-6">Admin Access Control</h3>
+            <div className="overflow-x-auto border rounded bg-gray-50 w-full scrollbar-thin">
+               <table className="w-full min-w-[750px] text-left text-sm border-collapse">
                  <thead className="bg-gray-100 text-xs font-bold uppercase text-gray-700">
                     <tr><th className="px-4 py-3">Identity</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Role</th><th className="px-4 py-3 text-right">Action</th></tr>
                  </thead>

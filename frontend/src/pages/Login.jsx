@@ -29,7 +29,7 @@ export default function Login() {
     const role = localStorage.getItem('userRole');
     
     if (token && role) {
-      if (role === 'admin' || role === 'superadmin') {
+      if (role === 'admin' || role === 'superadmin' || role === 'super_admin') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/', { replace: true });
@@ -45,14 +45,19 @@ export default function Login() {
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('userRole', data.role); 
       
-      // ✨ FIX: Properly save all details with fallbacks for Google Login
+      if (data.profile_image_url) {
+        localStorage.setItem('profileImage', data.profile_image_url);
+      } else {
+        localStorage.removeItem('profileImage');
+      }
+
       if (data.first_name) {
         localStorage.setItem('firstName', data.first_name || '');
         localStorage.setItem('lastName', data.last_name || '');
         localStorage.setItem('email', data.email || '');
       }
 
-      if (data.role === 'admin' || data.role === 'superadmin') {
+      if (data.role === 'admin' || data.role === 'superadmin' || data.role === 'super_admin') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/', { replace: true }); 
@@ -85,14 +90,19 @@ export default function Login() {
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('userRole', data.role); 
         
-        // ✨ FIX: Properly save all details with fallbacks for Standard Login
+        if (data.profile_image_url) {
+          localStorage.setItem('profileImage', data.profile_image_url);
+        } else {
+          localStorage.removeItem('profileImage');
+        }
+
         if (data.first_name) {
           localStorage.setItem('firstName', data.first_name || '');
           localStorage.setItem('lastName', data.last_name || ''); 
           localStorage.setItem('email', data.email || cleanEmail);
         }
 
-        if (data.role === 'admin' || data.role === 'superadmin') {
+        if (data.role === 'admin' || data.role === 'superadmin' || data.role === 'super_admin') {
           navigate('/admin', { replace: true });
         } else {
           navigate('/', { replace: true });
@@ -180,7 +190,7 @@ export default function Login() {
                 <input 
                   type="tel" 
                   value={phone}
-                  onChange={(e) => e.target.value}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded focus:ring-1 focus:ring-amber-500 outline-none transition"
                 />
               </div>

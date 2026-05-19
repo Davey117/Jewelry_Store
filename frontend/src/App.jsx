@@ -12,6 +12,7 @@ import ProductPage from './pages/ProductPage';
 import CartDrawer from './components/CartDrawer';
 import Checkout from './pages/Checkout'; 
 import OrderSuccess from './pages/OrderSuccess';
+import ProfilePage from './pages/ProfilePage';
 
 // ✨ Import our new luxury timeout hook
 import useInactivityTimeout from './hooks/useInactivityTimeout';
@@ -69,7 +70,7 @@ function App() {
           <Route path="/product/:id" element={<StoreRoute><ProductPage /></StoreRoute>} />
           <Route path="/checkout" element={<StoreRoute><Checkout /></StoreRoute>} /> 
           <Route path="/order-success" element={<StoreRoute><OrderSuccess /></StoreRoute>} />
-          
+          <Route path="/profile" element={<StoreRoute><ProfilePage /></StoreRoute>} />
           {/* Auth Routes (Everyone needs access to these) */}
           <Route path="/login" element={<Login />} />
           <Route path="/verify-email" element={<VerifyEmail />} />

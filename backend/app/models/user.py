@@ -12,6 +12,8 @@ class User(Base):
     last_name = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     address = Column(String, nullable=True)
+    loyalty_tier = Column(String, default="Novice") # Novice, Elite, Vanguard VIP
+    profile_image_url = Column(String, nullable=True) # Stores Google OAuth avatar or custom uploads
     role = Column(String, default="user", nullable=False) 
     is_active = Column(Boolean, default=True)
     

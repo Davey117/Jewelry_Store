@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles # ✨ Added for image uploads
 import os # ✨ Added for folder creation
-
+from app.api import auth, products, users
 from app.api.auth import router as auth_router
 from app.api.products import router as products_router
 from app.api.orders import router as orders_router
@@ -35,6 +35,7 @@ app.include_router(products_router)
 app.include_router(orders_router)
 app.include_router(payments_router)
 app.include_router(users_router)  
+app.include_router(users.router)
 
 @app.get("/")
 def health_check():

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchProduct } from '../services/api';
+import { fetchProduct, fetchProductReviews, createProductReview } from '../services/api';
 import { useCart } from '../context/CartContext';
 
 export default function ProductPage() {
@@ -9,21 +9,54 @@ export default function ProductPage() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(null); 
+  const [reviews, setReviews] = useState([]);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+
+  const token = localStorage.getItem('token');
+
+  const loadReviews = async () => {
+    try {
+      const data = await fetchProductReviews(id);
+      setReviews(data);
+    } catch (err) {
+      console.error("Failed to load piece reviews:", err);
+    }
+  };
 
   useEffect(() => {
-    const loadProduct = async () => {
+    const loadProductAndReviews = async () => {
       try {
         const data = await fetchProduct(id);
         setProduct(data);
         setActiveImage(data.main_image_url || data.image_url); 
+        await loadReviews();
       } catch (error) {
         console.error("Failed to load product details", error);
       } finally {
         setLoading(false);
       }
     };
-    loadProduct();
+    loadProductAndReviews();
   }, [id]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setReviewError('');
+    setSubmittingReview(true);
+    try {
+      await createProductReview(id, { rating: newRating, comment: newComment });
+      setNewComment('');
+      setNewRating(5);
+      await loadReviews();
+    } catch (err) {
+      setReviewError(err.response?.data?.detail || "Could not submit review signature.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   if (loading) {
     return <div className="min-h-[70vh] flex items-center justify-center text-xs tracking-widest uppercase text-gray-400">Retrieving details...</div>;
@@ -39,7 +72,6 @@ export default function ProductPage() {
     );
   }
 
-  // Safely extract all possible image variants from backend formats (arrays, explicit keys, or snake_case fallbacks)
   const galleryImages = [
     product.main_image_url || product.image_url,
     product.image_2_url || product.image_2,
@@ -48,7 +80,6 @@ export default function ProductPage() {
     ...(product.additional_images || [])
   ].filter(Boolean);
 
-  // Index Tracking for navigation toggles
   const currentImageIndex = galleryImages.indexOf(activeImage);
 
   const handleNextImage = () => {
@@ -99,7 +130,6 @@ export default function ProductPage() {
               <>
                 <img src={activeImage} alt={product.name} className="w-full h-full object-cover transition-all duration-500" />
                 
-                {/* Visual Navigation Arrows (Rendered dynamically if multiple images exist) */}
                 {galleryImages.length > 1 && (
                   <>
                     <button 
@@ -132,7 +162,9 @@ export default function ProductPage() {
           </div>
 
           <h1 className="text-2xl md:text-5xl font-serif text-gray-900 mb-4 md:mb-6 leading-tight uppercase tracking-wide">{product.name}</h1>
-          <p className="text-2xl font-bold text-gray-900 tracking-wider mb-8">${product.price.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-gray-900 tracking-wider mb-8">
+            ${Number(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
           
           <div className="w-full h-px bg-gray-200 mb-8"></div>
           
@@ -179,6 +211,84 @@ export default function ProductPage() {
 
         </div>
       </div>
+
+      {/* --- REVIEWS & RATINGS ACCORDION SYSTEM --- */}
+      <div className="mt-24 border-t pt-16 max-w-4xl mx-auto">
+        <h2 className="text-xl font-serif uppercase tracking-widest text-gray-900 mb-8 text-center">Client Feedback</h2>
+        
+        {token ? (
+          <form onSubmit={handleReviewSubmit} className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-12">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-707 mb-4">Leave Feedback</h3>
+            {reviewError && <div className="mb-4 text-xs font-bold text-red-600 uppercase tracking-wider">Error: {reviewError}</div>}
+            
+            <div className="mb-4">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1">Rating Classification</label>
+              <select 
+                value={newRating} 
+                onChange={e => setNewRating(Number(e.target.value))} 
+                className="px-3 py-2 border rounded text-xs bg-white text-gray-800 outline-none font-bold"
+              >
+                <option value="5">✦✦✦✦✦ (5 Stars)</option>
+                <option value="4">✦✦✦✦ (4 Stars)</option>
+                <option value="3">✦✦✦ (3 Stars)</option>
+                <option value="2">✦✦ (2 Stars)</option>
+                <option value="1">✦ (1 Star)</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1">Commentary Context</label>
+              <textarea 
+                required 
+                value={newComment} 
+                onChange={e => setNewComment(e.target.value)} 
+                placeholder="Share your experience regarding this piece..."
+                className="w-full px-3 py-2 border rounded text-sm h-20 outline-none resize-none bg-white text-gray-900"
+              ></textarea>
+            </div>
+
+            <div className="flex justify-end">
+              <button 
+                type="submit" 
+                disabled={submittingReview} 
+                className="bg-black text-white px-6 py-2.5 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition shadow disabled:bg-gray-400"
+              >
+                {submittingReview ? 'Transmitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="text-center bg-gray-50 border border-dashed p-6 rounded-xl mb-12">
+            <p className="text-xs text-gray-500 uppercase tracking-widest">
+              Please <Link to="/login" className="text-amber-600 font-bold hover:underline">Sign In</Link> to log validation reviews for this piece.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-6">
+          {reviews.length === 0 ? (
+            <p className="text-center text-xs text-gray-400 italic py-8 uppercase tracking-wider">No reviews logged for this asset signature yet.</p>
+          ) : (
+            reviews.map((rev) => (
+              <div key={rev.id} className="border-b pb-6">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <span className="text-xs font-bold text-gray-900 block">{rev.user_name}</span>
+                    <span className="text-[9px] text-amber-600 font-mono tracking-wider font-bold">
+                      {'✦'.repeat(rev.rating)}{'✧'.repeat(5 - rev.rating)}
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-gray-400 font-light italic">
+                    {new Date(rev.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+                <p className="text-gray-600 text-xs leading-relaxed font-light whitespace-pre-wrap">{rev.comment}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }

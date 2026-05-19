@@ -193,3 +193,29 @@ export const updateOrderStatus = async (orderId, status) => {
   return response.data;
 };
 
+// 👤 USER PROFILE ENDPOINTS
+export const fetchUserProfile = async () => {
+  const response = await api.get('/users/profile'); // Assumes 'api' is your pre-configured axios instance
+  return response.data;
+};
+
+export const updateUserProfile = async (profileData) => {
+  const response = await api.patch('/users/profile', profileData);
+  return response.data;
+};
+
+export const fetchUserOrderHistory = async () => {
+  const response = await api.get('/users/orders');
+  return response.data;
+};
+
+// 💬 PRODUCT REVIEW ENDPOINTS
+export const fetchProductReviews = async (productId) => {
+  const response = await api.get(`/products/${productId}/reviews`);
+  return response.data;
+};
+
+export const createProductReview = async (productId, reviewData) => {
+  const response = await api.post(`/products/${productId}/reviews`, reviewData);
+  return response.data;
+};
