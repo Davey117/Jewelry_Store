@@ -4,7 +4,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Set up Resend API core key
 resend.api_key = os.getenv("RESEND_API_KEY")
+
+# 🌟 Dynamic Sender Configuration with Smart Fallbacks
+MAIL_FROM_ADDRESS = os.getenv("MAIL_FROM_ADDRESS", "onboarding@resend.dev")
+MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "Aurum & Co.")
+SENDER_IDENTITY = f"{MAIL_FROM_NAME} <{MAIL_FROM_ADDRESS}>"
+
 
 def send_order_email(customer_email: str, customer_name: str, order_id: int, status: str, total: float):
     if not resend.api_key:
@@ -59,21 +66,19 @@ def send_order_email(customer_email: str, customer_name: str, order_id: int, sta
     """
 
     try:
-        # Change this "from" email to your verified domain later (e.g., sales@aurumandco.com)
         params = {
-            "from": "Aurum & Co. <onboarding@resend.dev>",
+            "from": SENDER_IDENTITY, # 🌟 Now dynamically populated
             "to": [customer_email],
             "subject": subject,
             "html": html_content,
         }
         
         email_response = resend.Emails.send(params)
-        print(f"Resend email sent successfully! ID: {email_response['id']}")
+        print(f"Resend order email sent successfully! ID: {email_response['id']}")
         
     except Exception as e:
         print(f"Failed to send email via Resend: {e}")
 
-# Add this below your existing send_order_email function in app/utils/email.py
 
 def send_welcome_email(customer_email: str, first_name: str):
     if not resend.api_key:
@@ -113,7 +118,7 @@ def send_welcome_email(customer_email: str, first_name: str):
 
     try:
         params = {
-            "from": "Aurum & Co. <onboarding@resend.dev>", # Update when you get your custom domain
+            "from": SENDER_IDENTITY, # 🌟 Now dynamically populated
             "to": [customer_email],
             "subject": subject,
             "html": html_content,
