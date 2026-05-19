@@ -11,11 +11,6 @@ resend.api_key = os.getenv("RESEND_API_KEY")
 MAIL_FROM_ADDRESS = os.getenv("MAIL_FROM_ADDRESS", "onboarding@resend.dev")
 MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "Aurum & Co.")
 SENDER_IDENTITY = f"{MAIL_FROM_NAME} <{MAIL_FROM_ADDRESS}>"
-print("============== RESEND DEPLOYMENT DEBUG ==============")
-print(f"RAW RESEND_API_KEY FROM ENV: {os.getenv('RESEND_API_KEY')[:10] if os.getenv('RESEND_API_KEY') else 'NOT FOUND'}")
-print(f"RAW MAIL_FROM_ADDRESS FROM ENV: {os.getenv('MAIL_FROM_ADDRESS')}")
-print(f"FINAL RESOLVED SENDER IDENTITY: {SENDER_IDENTITY}")
-print("=====================================================")
 
 
 def send_order_email(customer_email: str, customer_name: str, order_id: int, status: str, total: float):

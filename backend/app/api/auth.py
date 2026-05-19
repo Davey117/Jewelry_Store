@@ -44,6 +44,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
         return user
+    except ExpiredSignatureError:
+        # ✨ This tells the frontend axios interceptor to boot them out to /login
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Session expired. Please log in again."
+        )
     except JWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
 
@@ -51,6 +57,11 @@ class RoleUpdate(BaseModel):
     role: str
 
 def send_branded_email(to_email: str, subject: str, title: str, body_text: str, button_text: str, button_url: str):
+    # 🌟 FIX: Pull sender configurations dynamically from your Render environment variables
+    mail_from_address = os.getenv("MAIL_FROM_ADDRESS", "onboarding@resend.dev")
+    mail_from_name = os.getenv("MAIL_FROM_NAME", "Aurum & Co.")
+    sender_identity = f"{mail_from_name} <{mail_from_address}>"
+
     html_content = f"""
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9; padding: 40px 0; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -72,7 +83,7 @@ def send_branded_email(to_email: str, subject: str, title: str, body_text: str, 
     """
     try:
         resend.Emails.send({
-            "from": "Aurum & Co. <onboarding@resend.dev>",
+            "from": sender_identity, # 🌟 Fixed to use dynamic identity
             "to": [to_email],
             "subject": f"Aurum & Co. | {subject}",
             "html": html_content
@@ -82,23 +93,42 @@ def send_branded_email(to_email: str, subject: str, title: str, body_text: str, 
 
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == user_data.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # Look for an existing user account with this email address
+    existing_user = db.query(User).filter(User.email == user_data.email).first()
     
-    new_user = User(
-        email=user_data.email, 
-        hashed_password=get_password_hash(user_data.password),
-        first_name=user_data.first_name,
-        last_name=user_data.last_name,
-        phone=user_data.phone,
-        address=user_data.address,
-        is_active=False,
-        role="user"
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    if existing_user:
+        # If the account is already fully active, reject the request
+        if existing_user.is_active:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # 🌟 FIX: If the account is inactive, overwrite it with the fresh signup credentials
+        existing_user.hashed_password = get_password_hash(user_data.password)
+        existing_user.first_name = user_data.first_name
+        existing_user.last_name = user_data.last_name
+        existing_user.phone = user_data.phone
+        existing_user.address = user_data.address
+        
+        db.commit()
+        db.refresh(existing_user)
+        user_to_verify = existing_user
+    else:
+        # Create a completely new user entry if the email doesn't exist yet
+        new_user = User(
+            email=user_data.email, 
+            hashed_password=get_password_hash(user_data.password),
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
+            phone=user_data.phone,
+            address=user_data.address,
+            is_active=False,
+            role="user"
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        user_to_verify = new_user
 
+    # Generate a brand new, unexpired email confirmation token sequence
     token = serializer.dumps(user_data.email, salt="email-confirm")
     verify_url = f"{FRONTEND_URL}/verify-email?token={token}"
 
@@ -111,7 +141,8 @@ async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db:
         "Activate Account",
         verify_url
     )
-    return new_user
+    
+    return user_to_verify
 
 @router.get("/verify-email")
 def verify_email(token: str, db: Session = Depends(get_db)):
@@ -128,7 +159,6 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Welcome back! Your account is now active."}
 
-# 1. Update the login endpoint to accept Response injection
 @router.post("/login", response_model=Token)
 def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -138,18 +168,16 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Please activate your account via email first.")
     
-    # Generate both tokens
     access_token = create_access_token(data={"sub": user.email})
     refresh_token = create_refresh_token(data={"sub": user.email})
     
-    # Set the long-lived refresh token in an HttpOnly cookie
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
-        httponly=True,            # Strict security: completely hides cookie from client JavaScript (Blocks XSS)
-        secure=True,              # Strict enforcement: ensures browser only transmits over HTTPS
-        samesite="lax",           # CSRF safety policy mapping
-        max_age=7 * 24 * 60 * 60  # Lifetime matching: 7 days tracked in seconds
+        httponly=True,            
+        secure=True,              
+        samesite="lax",           
+        max_age=7 * 24 * 60 * 60  
     )
     
     return {
@@ -175,7 +203,6 @@ def refresh_session(request: Request, response: Response, db: Session = Depends(
         if not user:
             raise HTTPException(status_code=401, detail="Owner reference no longer available.")
             
-        # Re-issue a fresh 15-minute access token 
         new_access_token = create_access_token(data={"sub": user.email})
         return {"access_token": new_access_token, "token_type": "bearer"}
         
@@ -183,10 +210,12 @@ def refresh_session(request: Request, response: Response, db: Session = Depends(
         raise HTTPException(status_code=401, detail="Session expired. Please re-authenticate.")
     except JWTError:
         raise HTTPException(status_code=401, detail="Compromised validation signature.")
+
 class GoogleToken(BaseModel):
     token: str
+
 @router.post("/google", response_model=Token)
-def google_login(data: GoogleToken, background_tasks: BackgroundTasks,db: Session = Depends(get_db)):
+def google_login(data: GoogleToken, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     try:
         idinfo = id_token.verify_oauth2_token(data.token, requests.Request(), GOOGLE_CLIENT_ID)
         email = idinfo['email']
@@ -273,22 +302,3 @@ def update_user_role(user_id: int, request: RoleUpdate, current_user: User = Dep
     target_user.role = request.role
     db.commit()
     return {"message": f"User updated to {request.role}"}
-
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        email: str = payload.get("sub")
-        if email is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        user = db.query(User).filter(User.email == email).first()
-        if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
-        return user
-    except ExpiredSignatureError:
-        # ✨ This tells the frontend axios interceptor to boot them out to /login
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Session expired. Please log in again."
-        )
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
