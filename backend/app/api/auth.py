@@ -144,28 +144,11 @@ async def register(user_data: UserCreate, background_tasks: BackgroundTasks, db:
     
     return user_to_verify
 
-# @router.get("/verify-email")
-# def verify_email(token: str, db: Session = Depends(get_db)):
-#     try:
-#         email = serializer.loads(token, salt="email-confirm", max_age=3600)
-#     except Exception:
-#         raise HTTPException(status_code=400, detail="Link invalid or expired")
-
-#     user = db.query(User).filter(User.email == email).first()
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found")
-        
-#     user.is_active = True
-#     db.commit()
-#     return {"message": "Welcome back! Your account is now active."}
-
 @router.get("/verify-email")
 def verify_email(token: str, db: Session = Depends(get_db)):
     try:
         email = serializer.loads(token, salt="email-confirm", max_age=3600)
-    except Exception as e:
-        # 🌟 This will print the explicit cryptographic error to your Render terminal
-        print(f"❌ CRYPTO TOKEN VERIFICATION FAILED: {str(e)}")
+    except Exception:
         raise HTTPException(status_code=400, detail="Link invalid or expired")
 
     user = db.query(User).filter(User.email == email).first()
@@ -175,6 +158,7 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     user.is_active = True
     db.commit()
     return {"message": "Welcome back! Your account is now active."}
+
 
 @router.post("/login", response_model=Token)
 def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):

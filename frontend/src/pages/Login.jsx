@@ -118,7 +118,7 @@ export default function Login() {
           address: address
         };
         await registerUser(userData);
-        setMessage("Account created! Please check your email to verify your account.");
+        setMessage("Account created! Please check your email to verify your account, ensure to check your spam folder.");
         setView('login');
         setPassword('');
         setConfirmPassword('');

@@ -16,13 +16,24 @@ const VerifyEmail = () => {
             }
 
             try {
-                // Adjust this URL to match your backend (localhost or Render)
-                const response = await axios.get(`http://localhost:8000/api/auth/verify-email?token=${token}`);
+                // 🌟 Dynamically read your backend URL with a fallback to your live production Render API
+                const API_BASE = import.meta.env.VITE_API_BASE_URL;
+                
+                // Clean trailing slashes to prevent double-slashing urls
+                const cleanBase = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
+                
+                // Build the request path safely depending on whether your base url environment key includes '/api'
+                const finalUrl = cleanBase.includes('/api') 
+                    ? `${cleanBase}/auth/verify-email?token=${token}` 
+                    : `${cleanBase}/api/auth/verify-email?token=${token}`;
+
+                const response = await axios.get(finalUrl);
                 setStatus('success');
-                // Optional: Auto-redirect to login after 3 seconds
+                
+                // Optional: Auto-redirect to login after 4 seconds
                 setTimeout(() => navigate('/login'), 4000);
             } catch (err) {
-                console.error(err);
+                console.error("Verification failed layout context:", err);
                 setStatus('error');
             }
         };

@@ -47,7 +47,7 @@ export default function Checkout() {
 
       await createOrder(orderData);
       
-      const adminWhatsAppNumber = "2348000000000"; 
+      const adminWhatsAppNumber = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER; 
       const message = `Hello Aurum & Co., I just placed an order!%0A%0A*Name:* ${formData.firstName} ${formData.lastName}%0A*Total:* $${cartTotal.toFixed(2)}%0A*Email:* ${formData.email}%0A%0A_Please let me know how to proceed with payment._`;
       const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${message}`;
 
