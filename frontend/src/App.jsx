@@ -13,8 +13,7 @@ import CartDrawer from './components/CartDrawer';
 import Checkout from './pages/Checkout'; 
 import OrderSuccess from './pages/OrderSuccess';
 import ProfilePage from './pages/ProfilePage';
-
-// ✨ Import our new luxury timeout hook
+import CryptoPayment from './pages/CryptoPayment';
 import useInactivityTimeout from './hooks/useInactivityTimeout';
 
 function App() {
@@ -71,7 +70,7 @@ function App() {
           <Route path="/checkout" element={<StoreRoute><Checkout /></StoreRoute>} /> 
           <Route path="/order-success" element={<StoreRoute><OrderSuccess /></StoreRoute>} />
           <Route path="/profile" element={<StoreRoute><ProfilePage /></StoreRoute>} />
-          {/* Auth Routes (Everyone needs access to these) */}
+          <Route path="/crypto-checkout" element={<StoreRoute><CryptoPayment /></StoreRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />

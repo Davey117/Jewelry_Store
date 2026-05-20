@@ -13,6 +13,8 @@ class OrderItemCreate(BaseModel):
 class OrderCreate(BaseModel):
     total_amount: float
     items: List[OrderItemCreate]
+    payment_method: str 
+    shipping_address: str
 
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
@@ -45,6 +47,19 @@ class OrderResponse(BaseModel):
     created_at: datetime
     items: List[OrderItemResponse]
     user: OrderUserResponse
+    payment_method: str
+    shipping_address: str
+    crypto_currency: Optional[str] = None
+    crypto_network: Optional[str] = None
+    crypto_tx_hash: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class CryptoPaymentSubmit(BaseModel):
+    crypto_currency: str
+    crypto_network: str
+    crypto_tx_hash: Optional[str] = None
 
     class Config:
         from_attributes = True

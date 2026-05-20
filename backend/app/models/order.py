@@ -7,6 +7,7 @@ import enum
 
 class OrderStatus(str, enum.Enum):
     PENDING_PAYMENT = "pending_payment"
+    PENDING_CONFIRMATION = "pending_confirmation"
     CONFIRMED = "confirmed"
     PROCESSING = "processing"
     SHIPPED = "shipped"
@@ -21,6 +22,11 @@ class Order(Base):
     total_amount = Column(Float, nullable=False)
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING_PAYMENT, nullable=False)
     tracking_number = Column(String, nullable=True)
+    payment_method = Column(String, nullable=False)
+    shipping_address = Column(String, nullable=False)
+    crypto_currency = Column(String, nullable=True)  # e.g., "USDT", "BTC"
+    crypto_network = Column(String, nullable=True)   # e.g., "TRC-20", "ERC-20"
+    crypto_tx_hash = Column(String, nullable=True)
     
     # Automatically record when the order was made and last updated
     created_at = Column(DateTime(timezone=True), server_default=func.now())

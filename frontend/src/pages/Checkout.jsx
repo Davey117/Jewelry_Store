@@ -7,6 +7,7 @@ export default function Checkout() {
   const { cart, cartTotal, clearCart } = useCart();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('crypto'); // 🌟 Added payment tracking state Defaulting to crypto
   const token = localStorage.getItem('token'); 
 
   useEffect(() => {
@@ -16,12 +17,10 @@ export default function Checkout() {
     }
   }, [token, navigate]);
 
-  // ✨ UX UPGRADE: Pull stored details so the user doesn't have to re-type them!
   const storedFirstName = localStorage.getItem('firstName') || '';
   const storedLastName = localStorage.getItem('lastName') || ''; 
   const storedEmail = localStorage.getItem('email') || '';
 
-  // ✨ Set the initial state using the stored variables
   const [formData, setFormData] = useState({
     email: storedEmail, 
     firstName: storedFirstName, 
@@ -36,8 +35,14 @@ export default function Checkout() {
     setIsProcessing(true);
 
     try {
+      // 🌟 Consolidate shipping address object properties into a standardized string
+      const fullShippingAddress = `${formData.address}, ${formData.city}, ${formData.zip}`;
+
+      // 🌟 Update Payload mapping parameters to match your new FastAPI Pydantic schema validation rules
       const orderData = {
         total_amount: cartTotal,
+        payment_method: paymentMethod, 
+        shipping_address: fullShippingAddress,
         items: cart.map(item => ({ 
           product_id: item.id, 
           quantity: item.quantity, 
@@ -45,19 +50,44 @@ export default function Checkout() {
         }))
       };
 
-      await createOrder(orderData);
+      // Fire order allocation schema down to the database infrastructure
+      const response = await createOrder(orderData);
       
-      const adminWhatsAppNumber = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER; 
-      const message = `Hello Aurum & Co., I just placed an order!%0A%0A*Name:* ${formData.firstName} ${formData.lastName}%0A*Total:* $${cartTotal.toFixed(2)}%0A*Email:* ${formData.email}%0A%0A_Please let me know how to proceed with payment._`;
-      const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${message}`;
+      // Handle fallback resolution values across Axios configurations safely
+      const orderId = response?.id || response?.data?.id || response?.data?.order_id;
 
-      clearCart();
-      window.open(whatsappUrl, '_blank');
-      navigate('/order-success');
+      if (paymentMethod === 'crypto') {
+        // 🌟 CLEAR THE CART CONTEXT AND ROUTE DIRECTLY TO YOUR NEW CRYPTO INSTRUCTIONS FLOW
+        clearCart();
+        navigate('/crypto-checkout', { 
+          state: { 
+            orderId: orderId, 
+            totalAmount: cartTotal 
+          } 
+        });
+      } else {
+        // WhatsApp Legacy Manual Execution fallback channel 
+        const adminWhatsAppNumber = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER || "234XXXXXXXXXX"; 
+        
+        // Use clean template strings without manual inline %0A parameters
+        const clearTextMessage = `Hello Aurum & Co., I just placed a manual invoice order!\n\n` +
+          `*Order ID:* #${orderId || "Pending"}\n` +
+          `*Name:* ${formData.firstName} ${formData.lastName}\n` +
+          `*Total:* $${cartTotal.toFixed(2)}\n` +
+          `*Email:* ${formData.email}\n\n` +
+          `_Please provide manual payment instructions._`;
+
+        // 🌟 FIX: encodeURIComponent completely eliminates raw parameter space string breakages!
+        const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(clearTextMessage)}`;
+
+        clearCart();
+        window.open(whatsappUrl, '_blank');
+        navigate('/order-success');
+      }
       
     } catch (error) {
       console.error("Order processing failed:", error);
-      alert("Failed to process order. Please try again.");
+      alert("Failed to process order. Please check data structures or trace network connectivity.");
     } finally {
       setIsProcessing(false);
     }
@@ -86,7 +116,6 @@ export default function Checkout() {
             {/* Contact Info */}
             <div>
               <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">Contact Information</h2>
-              {/* ✨ Notice we added value={formData.email} to map it to our pre-filled state */}
               <input type="email" required value={formData.email} placeholder="Email Address" className="w-full px-4 py-3 border border-gray-200 focus:border-amber-600 focus:ring-0 outline-none transition text-sm" onChange={e => setFormData({...formData, email: e.target.value})} />
             </div>
 
@@ -94,18 +123,14 @@ export default function Checkout() {
             <div>
               <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">Shipping Address</h2>
               <div className="grid grid-cols-2 gap-4 mb-4">
-                {/* ✨ Pre-filled First and Last Name */}
                 <input type="text" required value={formData.firstName} placeholder="First Name" className="w-full px-4 py-3 border border-gray-200 focus:border-amber-600 focus:ring-0 outline-none transition text-sm" onChange={e => setFormData({...formData, firstName: e.target.value})} />
                 <input type="text" required value={formData.lastName} placeholder="Last Name" className="w-full px-4 py-3 border border-gray-200 focus:border-amber-600 focus:ring-0 outline-none transition text-sm" onChange={e => setFormData({...formData, lastName: e.target.value})} />
               </div>
               
-              {/* ✨ Notice we added value={formData...} to these as well to ensure they function perfectly as controlled inputs */}
               <input type="text" required value={formData.address} placeholder="Street Address" className="w-full px-4 py-3 border border-gray-200 focus:border-amber-600 focus:ring-0 outline-none transition text-sm mb-4" onChange={e => setFormData({...formData, address: e.target.value})} />
               
               <div className="grid grid-cols-2 gap-4">
                 <input type="text" required value={formData.city} placeholder="City" className="w-full px-4 py-3 border border-gray-200 focus:border-amber-600 focus:ring-0 outline-none transition text-sm" onChange={e => setFormData({...formData, city: e.target.value})} />
-                
-                {/* ✨ ZIP CODE UPGRADE: replace(/\D/g, '') instantly destroys any letters typed into the box! */}
                 <input 
                   type="text" 
                   required 
@@ -119,30 +144,55 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* WhatsApp Payment Box */}
-            <div className="bg-amber-50 p-6 border border-amber-200 shadow-sm relative overflow-hidden flex flex-col items-center text-center">
-              <svg className="w-8 h-8 text-amber-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <h2 className="text-sm font-bold uppercase tracking-widest text-amber-900 mb-2">Card Payment Coming Soon</h2>
-              <p className="text-xs text-amber-700 max-w-md">
-                We are currently upgrading our secure payment gateway. For now, please complete your order via WhatsApp. Our team will assist you immediately with payment and shipping.
-              </p>
+            {/* 🌟 LUXURY PAYMENT METHOD SELECTOR SYSTEM COMPONENT */}
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">Select Payment Method</h2>
+              <div className="space-y-3">
+                
+                {/* Option A: Crypto Payment Method */}
+                <label className={`flex items-center justify-between p-4 border transition cursor-pointer select-none ${paymentMethod === 'crypto' ? 'border-amber-600 bg-amber-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className="flex items-center space-x-3">
+                    <input type="radio" name="payment_method" value="crypto" checked={paymentMethod === 'crypto'} onChange={() => setPaymentMethod('crypto')} className="text-amber-600 focus:ring-0" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-900">Cryptocurrency Payment</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Pay via BTC, ETH, USDT, USDC or TRON immediately.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 text-xs font-mono font-medium text-gray-400">
+                    <span>BTC</span><span>•</span><span>USDT</span>
+                  </div>
+                </label>
+
+                {/* Option B: WhatsApp Invoice Checkouts */}
+                <label className={`flex items-center justify-between p-4 border transition cursor-pointer select-none ${paymentMethod === 'whatsapp' ? 'border-amber-600 bg-amber-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className="flex items-center space-x-3">
+                    <input type="radio" name="payment_method" value="whatsapp" checked={paymentMethod === 'whatsapp'} onChange={() => setPaymentMethod('whatsapp')} className="text-amber-600 focus:ring-0" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-900">Direct WhatsApp Checkout</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Place order database tracking logs and finish details with an agent manually.</p>
+                    </div>
+                  </div>
+                </label>
+
+              </div>
             </div>
 
+            {/* Execution Master Action Triggers */}
             <button 
               type="submit" 
               disabled={isProcessing}
-              className={`w-full py-4 text-xs font-bold uppercase tracking-[0.2em] transition shadow-lg mt-8 flex items-center justify-center space-x-2 ${isProcessing ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[#25D366] text-white hover:bg-[#1ebe5d]'}`}
+              className={`w-full py-4 text-xs font-bold uppercase tracking-[0.2em] transition shadow-lg mt-4 flex items-center justify-center space-x-2 ${
+                isProcessing 
+                  ? 'bg-gray-400 text-white cursor-not-allowed' 
+                  : 'bg-gray-900 text-white hover:bg-black'
+              }`}
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-              </svg>
-              <span>{isProcessing ? 'Processing Order...' : 'Complete Order on WhatsApp'}</span>
+              <span>{isProcessing ? 'Processing Transaction Pipeline...' : 'Place Secure Order'}</span>
             </button>
           </form>
         </div>
 
+        {/* Order Sidebar Summary */}
         <div className="w-full lg:w-2/5 bg-gray-50 p-8 border border-gray-100 h-fit sticky top-32">
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-6 border-b border-gray-200 pb-4">Order Summary</h2>
           

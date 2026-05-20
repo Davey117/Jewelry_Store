@@ -5,13 +5,13 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 from dotenv import load_dotenv
+from app.core.database import Base
+import app.models 
 
 # Load database URL from .env
 load_dotenv()
 
-# Import the Base and all models so Alembic can see them
-from app.core.database import Base
-import app.models 
+
 
 # this is the Alembic Config object
 config = context.config
