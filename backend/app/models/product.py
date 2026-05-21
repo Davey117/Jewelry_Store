@@ -34,3 +34,16 @@ class Product(Base):
     # Relationships
     category = relationship("Category", back_populates="products")
     added_by = relationship("User")
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    rating = Column(Integer, nullable=False)
+    comment = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Optional: If you want to configure back-population relationships later
+    product = relationship("Product", back_populates="reviews" if hasattr(Product, "reviews") else None)

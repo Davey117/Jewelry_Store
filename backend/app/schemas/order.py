@@ -1,5 +1,5 @@
 # backend/app/schemas/order.py
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from app.models.order import OrderStatus
@@ -26,8 +26,7 @@ class OrderItemResponse(BaseModel):
     price_at_purchase: float
     product: ProductResponse
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OrderUserResponse(BaseModel):
     id: int
@@ -35,8 +34,7 @@ class OrderUserResponse(BaseModel):
     first_name: str
     last_name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OrderResponse(BaseModel):
     id: int
@@ -53,13 +51,11 @@ class OrderResponse(BaseModel):
     crypto_network: Optional[str] = None
     crypto_tx_hash: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CryptoPaymentSubmit(BaseModel):
     crypto_currency: str
     crypto_network: str
     crypto_tx_hash: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

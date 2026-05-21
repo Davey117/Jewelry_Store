@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.order import Order
 from app.api.auth import get_current_user
 from app.schemas.user import UserResponse, UserProfileUpdate, UserProfileResponse
+from app.schemas.order import OrderResponse
 from app.api.deps import get_super_admin_user 
 
 router = APIRouter(prefix="/api/users", tags=["Admin User Management"])
@@ -32,22 +33,18 @@ def update_user_profile(
     db.refresh(current_user)
     return current_user
 
-@router.get("/orders", response_model=list) # Replace list with your OrderResponse schema if you have one
+@router.get("/orders", response_model=List[OrderResponse])
 def get_user_order_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Assuming your Order model tracks user entries via user_id
     orders = db.query(Order).filter(Order.user_id == current_user.id).order_by(Order.created_at.desc()).all()
     return orders
 
-# 1. A small schema just for receiving the new role from the frontend
 class RoleUpdateRequest(BaseModel):
     new_role: str
 
-# 2. Get all users (Super Admin Only)
 @router.get("/", response_model=List[UserResponse], dependencies=[Depends(get_super_admin_user)])
 def get_all_users(db: Session = Depends(get_db)):
     return db.query(User).all()
 
-# 3. Promote or Demote a user (Replaces the old "create staff" method)
 @router.patch("/{user_id}/role")
 def update_user_role(
     user_id: int,
@@ -62,7 +59,6 @@ def update_user_role(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # 🏴‍☠️ MUTINY PROTECTION 
     if target_user.role == "super_admin" and target_user.id != current_user.id:
         raise HTTPException(status_code=403, detail="Cannot modify another Super Admin's role.")
     
@@ -70,7 +66,6 @@ def update_user_role(
     db.commit()
     return {"message": f"User {target_user.email} successfully updated to {role_req.new_role}."}
 
-# 4. Deactivate a user
 @router.patch("/{user_id}/deactivate")
 def deactivate_user(
     user_id: int, 
@@ -81,7 +76,6 @@ def deactivate_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # 🏴‍☠️ MUTINY PROTECTION
     if user.role == "super_admin" and user.id != current_user.id:
         raise HTTPException(status_code=403, detail="Cannot deactivate another Super Admin.")
     

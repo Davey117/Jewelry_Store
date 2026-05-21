@@ -64,7 +64,9 @@ export default function AdminDashboard() {
         { id: 1, name: "Watches" },
         { id: 2, name: "Necklaces" },
         { id: 3, name: "Earrings" },
-        { id: 4, name: "Rings" }
+        { id: 4, name: "Rings" },
+        { id: 5, name: "Bracelets" }
+
       ]);
     }
   };
@@ -259,6 +261,7 @@ export default function AdminDashboard() {
                     <option value="2">Necklaces</option>
                     <option value="1">Watches</option>
                     <option value="3">Earrings</option>
+                    <option value="5">Bracelets</option>
                   </select>
 
                   <select 
@@ -332,6 +335,7 @@ export default function AdminDashboard() {
                            {p.category_id === 2 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Necklaces</span>}
                            {p.category_id === 3 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Earrings</span>}
                            {p.category_id === 4 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Rings</span>}
+                           {p.category_id === 5 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Bracelets</span>}
                            {p.color !== "None" && <span className={`text-[10px] px-2 py-0.5 rounded border uppercase ${p.color === 'Gold' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600'}`}>{p.color}</span>}
                         </div>
                       </td>
@@ -479,6 +483,7 @@ export default function AdminDashboard() {
                     <option value="2">Necklaces</option>
                     <option value="1">Watches</option>
                     <option value="3">Earrings</option>
+                    <option value="5">Bracelets</option>
                   </select>
                 </div>
                 <div>

@@ -195,27 +195,27 @@ export const updateOrderStatus = async (orderId, status) => {
 
 // 👤 USER PROFILE ENDPOINTS
 export const fetchUserProfile = async () => {
-  const response = await api.get('/users/profile'); // Assumes 'api' is your pre-configured axios instance
+  const response = await apiClient.get(`${API_URL}/users/profile`);
   return response.data;
 };
 
 export const updateUserProfile = async (profileData) => {
-  const response = await api.patch('/users/profile', profileData);
+  const response = await apiClient.patch(`${API_URL}/users/profile`, profileData);
   return response.data;
 };
 
 export const fetchUserOrderHistory = async () => {
-  const response = await api.get('/users/orders');
+  const response = await apiClient.get(`${API_URL}/users/orders`);
   return response.data;
 };
 
 // 💬 PRODUCT REVIEW ENDPOINTS
 export const fetchProductReviews = async (productId) => {
-  const response = await api.get(`/products/${productId}/reviews`);
+  const response = await apiClient.get(`${API_URL}/products/${productId}/reviews`);
   return response.data;
 };
 
 export const createProductReview = async (productId, reviewData) => {
-  const response = await api.post(`/products/${productId}/reviews`, reviewData);
+  const response = await apiClient.post(`${API_URL}/products/${productId}/reviews`, reviewData);
   return response.data;
 };

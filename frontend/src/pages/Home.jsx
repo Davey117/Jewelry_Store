@@ -91,10 +91,18 @@ export default function Home() {
 
           {/* Category 4: Earrings (ID: 3) */}
           <Link to="/catalog?category=3" className="group relative h-96 overflow-hidden bg-gray-100">
-            <img src="https://images.unsplash.com/photo-1635767798638-3e25273a8236?q=80&w=2070&auto=format&fit=crop" alt="Earrings" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <img src={`${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}/static/images/Earring.jpeg`} alt="Earrings" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
             <div className="absolute inset-0 flex items-end p-8">
               <span className="text-white text-xs uppercase tracking-[0.3em] font-bold border-b border-white/50 pb-1">Earrings</span>
+            </div>
+          </Link>
+          {/* Category 5: Bracelets (ID: 5) */}
+          <Link to="/catalog?category=5" className="group relative h-96 overflow-hidden bg-gray-100">
+            <img src={`${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}/static/images/Bracelet.jpeg`} alt="Bracelets" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
+            <div className="absolute inset-0 flex items-end p-8">
+              <span className="text-white text-xs uppercase tracking-[0.3em] font-bold border-b border-white/50 pb-1">Bracelets</span>
             </div>
           </Link>
 
