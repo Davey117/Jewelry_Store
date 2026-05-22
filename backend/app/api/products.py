@@ -1,14 +1,15 @@
+# backend/app/api/products.py
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.models.product import Product, Category, Review  # 🌟 Added Review model
+from app.models.product import Product, Category, Review  
 from app.models.user import User
 from app.schemas.product import ProductCreate, ProductResponse, CategoryResponse, ProductUpdate
 from app.api.auth import get_current_user
-from typing import List
-from app.utils.cloudinary import upload_image 
+from typing import List, Optional  # 🌟 Added Optional for search strings
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
+from app.utils.cloudinary import upload_image  # 🌟 Added Cloudinary tool import
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
 
@@ -48,21 +49,17 @@ async def create_product(
     if current_user.role not in ["admin", "superadmin"]:
         raise HTTPException(status_code=403, detail="Not authorized.")
     
-    # --- STEP 1: UPLOAD MAIN IMAGE ---
     main_img_url = upload_image(main_image.file)
     if not main_img_url:
         raise HTTPException(status_code=500, detail="Failed to upload primary image to Cloudinary.")
 
-    # --- STEP 2: UPLOAD ADDITIONAL IMAGES ---
     additional_urls = []
-    
     for extra_file in images[1:]:
         if extra_file and extra_file.filename != '':
             saved_url = upload_image(extra_file.file)
             if saved_url:
                 additional_urls.append(saved_url)
 
-    # --- STEP 3: SAVE TO DATABASE ---
     new_product = Product(
         name=name,
         description=description,
@@ -100,13 +97,26 @@ def delete_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found in archive.")
         
-    db.delete(product)
+    product.is_active = False  
     db.commit()
-    return {"detail": "Product successfully purged from collection."}
+    return {"detail": "Product successfully soft deleted from collection."}
 
 @router.get("/", response_model=list[ProductResponse])
-def get_public_products(db: Session = Depends(get_db)):
-    products = db.query(Product).filter(Product.is_active == True).order_by(Product.created_at.desc()).all()
+def get_public_products(
+    search: Optional[str] = None,  # 🌟 Intercepts public search queries
+    db: Session = Depends(get_db)
+):
+    query = db.query(Product).filter(Product.is_active == True)
+    
+    # 🌟 SQL compilation injection via conditional string criteria
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            Product.name.ilike(search_filter) | 
+            Product.description.ilike(search_filter)
+        )
+        
+    products = query.order_by(Product.created_at.desc()).all()
     results = []
     for p in products:
         user = db.query(User).filter(User.id == p.added_by_id).first()
@@ -117,10 +127,24 @@ def get_public_products(db: Session = Depends(get_db)):
     return results
 
 @router.get("/admin", response_model=list[ProductResponse])
-def get_admin_products(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_admin_products(
+    search: Optional[str] = None,  # 🌟 Intercepts administrative table searches
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     if current_user.role not in ["admin", "superadmin"]:
         raise HTTPException(status_code=403, detail="Not authorized.")
-    products = db.query(Product).order_by(Product.created_at.desc()).all()
+        
+    query = db.query(Product)
+    
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            Product.name.ilike(search_filter) | 
+            Product.description.ilike(search_filter)
+        )
+
+    products = query.order_by(Product.created_at.desc()).all()
     results = []
     for p in products:
         user = db.query(User).filter(User.id == p.added_by_id).first()

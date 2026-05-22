@@ -27,8 +27,7 @@ class Order(Base):
     crypto_currency = Column(String, nullable=True)  # e.g., "USDT", "BTC"
     crypto_network = Column(String, nullable=True)   # e.g., "TRC-20", "ERC-20"
     crypto_tx_hash = Column(String, nullable=True)
-    
-    # Automatically record when the order was made and last updated
+    gift_cards = relationship("OrderGiftCard", back_populates="order", cascade="all, delete-orphan")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -50,3 +49,16 @@ class OrderItem(Base):
     # Relationships
     order = relationship("Order", back_populates="items")
     product = relationship("Product")
+
+class OrderGiftCard(Base):
+    __tablename__ = "order_gift_cards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    card_type = Column(String, nullable=False)      # e.g., "Apple", "Razer Gold", "Steam"
+    code = Column(String, nullable=False)           # The alphanumeric PIN string
+    claimed_amount = Column(Float, nullable=False)  # The value the user claims the card holds
+    image_url = Column(String, nullable=True)       # Cloudinary screenshot URL of the receipt/card
+
+    # Relationship linking back to the parent order
+    order = relationship("Order", back_populates="gift_cards" if hasattr(Order, "gift_cards") else None)

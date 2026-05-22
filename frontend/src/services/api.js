@@ -219,3 +219,19 @@ export const createProductReview = async (productId, reviewData) => {
   const response = await apiClient.post(`${API_URL}/products/${productId}/reviews`, reviewData);
   return response.data;
 };
+
+// Append to frontend/src/services/api.js
+
+export const submitGiftCards = async (orderId, formData) => {
+  try {
+    const response = await apiClient.post(`${API_URL}/orders/${orderId}/submit-giftcards`, formData, {
+      headers: { 
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`API Error submitting gift cards for order ${orderId}:`, error);
+    throw error;
+  }
+};

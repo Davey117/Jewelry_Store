@@ -21,7 +21,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     stock_quantity = Column(Integer, default=0)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False) # ✨ Now Required!
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     
     # ✨ NEW FIELDS
     color = Column(String, default="None") # Gold, Silver, None

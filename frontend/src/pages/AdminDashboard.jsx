@@ -31,6 +31,10 @@ export default function AdminDashboard() {
   const [formError, setFormError] = useState(null); 
   const [isUploading, setIsUploading] = useState(false);
 
+  // --- LIVE DEBUNCED SEARCH STATE ---
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
   // --- NEW PRODUCT OBJECT ---
   const [newProduct, setNewProduct] = useState({ 
     name: '', description: '', price: '', stock_quantity: '', 
@@ -39,19 +43,29 @@ export default function AdminDashboard() {
   });
 
   // --- EDITING & DELETING STATE ---
-  const [editingProduct, setEditingProduct] = useState(null); // 🌟 Tracks product details form modification target
+  const [editingProduct, setEditingProduct] = useState(null); 
   const [deletingProduct, setDeletingProduct] = useState(null); 
 
   const userRole = localStorage.getItem('userRole') || 'user';
   const firstName = localStorage.getItem('firstName') || 'Executive'; 
 
-  // --- LIFECYCLE: DATA FETCHING ---
+  // --- LIFECYCLE: STATIC DATA FETCHING ---
   useEffect(() => {
     loadCategories();
-    if (activeTab === 'inventory') loadProducts();
     if (activeTab === 'orders') loadOrders();
     if (activeTab === 'team' && userRole === 'superadmin') loadUsers();
   }, [activeTab, userRole]);
+
+  // --- LIFECYCLE: DEBUNCED INVENTORY SEARCH ENGINE ---
+  useEffect(() => {
+    if (activeTab !== 'inventory') return;
+
+    const delayDebounceFn = setTimeout(() => {
+      loadProducts(searchTerm);
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, activeTab]);
 
   const loadCategories = async () => {
     try { 
@@ -66,7 +80,6 @@ export default function AdminDashboard() {
         { id: 3, name: "Earrings" },
         { id: 4, name: "Rings" },
         { id: 5, name: "Bracelets" }
-
       ]);
     }
   };
@@ -78,11 +91,22 @@ export default function AdminDashboard() {
     finally { setLoading(false); }
   };
 
-  const loadProducts = async () => {
-    setLoading(true);
-    try { setProducts(await fetchAdminProducts()); } 
-    catch (err) { console.error(err); } 
-    finally { setLoading(false); }
+  const loadProducts = async (searchQuery = '') => {
+    if (searchQuery.trim()) {
+      setIsSearching(true);
+    } else {
+      setLoading(true);
+    }
+    try { 
+      setProducts(await fetchAdminProducts(searchQuery)); 
+    } 
+    catch (err) { 
+      console.error(err); 
+    } 
+    finally { 
+      setLoading(false); 
+      setIsSearching(false);
+    }
   };
 
   const loadOrders = async () => {
@@ -122,7 +146,7 @@ export default function AdminDashboard() {
       await createProduct(formData);
       setNewProduct({ name: '', description: '', price: '', stock_quantity: '', category_id: '', color: 'None', main_image: null, image_2: null, image_3: null, image_4: null });
       setShowAddProduct(false);
-      loadProducts(); 
+      loadProducts(searchTerm); 
     } catch (err) {
       const detail = err.response?.data?.detail;
       if (Array.isArray(detail)) {
@@ -147,7 +171,7 @@ export default function AdminDashboard() {
         description: editingProduct.description
       });
       setEditingProduct(null); 
-      loadProducts(); 
+      loadProducts(searchTerm); 
     } catch (err) { 
       alert("Failed to modify compilation entry parameters."); 
     }
@@ -157,7 +181,7 @@ export default function AdminDashboard() {
     try {
       await deleteProduct(deletingProduct.id);
       setDeletingProduct(null);
-      loadProducts(); 
+      loadProducts(searchTerm); 
     } catch (err) {
       alert(err.response?.data?.detail || "Failed to purge item from repository.");
     }
@@ -233,9 +257,30 @@ export default function AdminDashboard() {
         {/* INVENTORY SECTION */}
         {activeTab === 'inventory' && (
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
               <h3 className="text-sm font-bold text-gray-700 uppercase">Catalog Management</h3>
-              <button onClick={() => setShowAddProduct(!showAddProduct)} className="bg-black text-white px-4 py-2 rounded text-xs uppercase hover:bg-gray-800 transition">
+              
+              {/* 🌟 INLINE LIVE SEARCH ELEMENT COMPONENT */}
+              <div className="relative w-full sm:w-72">
+                <div className="flex items-center border border-gray-200 px-3 py-1.5 bg-gray-50 rounded focus-within:border-amber-600 transition">
+                  <input
+                    type="text"
+                    placeholder="Search inventory..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-transparent text-xs outline-none text-gray-900 font-medium uppercase tracking-wider placeholder-gray-400"
+                  />
+                  {isSearching ? (
+                    <div className="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="w-3.5 h-3.5 text-gray-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+
+              <button onClick={() => setShowAddProduct(!showAddProduct)} className="bg-black text-white px-4 py-2 rounded text-xs uppercase hover:bg-gray-800 transition whitespace-nowrap self-end sm:self-auto">
                 {showAddProduct ? 'Cancel' : '+ New Item'}
               </button>
             </div>
@@ -278,7 +323,6 @@ export default function AdminDashboard() {
 
                 <textarea required value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full px-3 py-2 border rounded text-sm mb-4 h-20" placeholder="Product Details..."></textarea>
 
-                {/* 🌟 MAIN UPLOAD CANVAS LIVE PREVIEW OVERLAY */}
                 <div className="mb-4 p-4 border border-dashed border-amber-300 bg-amber-50 rounded text-center">
                   <p className="text-[10px] font-bold text-amber-900 mb-2 uppercase">Main Image (Required)</p>
                   {newProduct.main_image && (
@@ -291,7 +335,6 @@ export default function AdminDashboard() {
                   <input type="file" accept="image/*" required onChange={e => setNewProduct({...newProduct, main_image: e.target.files[0]})} className="text-xs" />
                 </div>
 
-                {/* 🌟 ADDITIONAL ASSETS LIVE PREVIEWS */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   {[2, 3, 4].map(num => (
                     <div key={num} className="border p-2 bg-white rounded text-center">
@@ -323,51 +366,53 @@ export default function AdminDashboard() {
                   <tr><th className="px-4 py-3">Item</th><th className="px-4 py-3">Details</th><th className="px-4 py-3">Price</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Added By</th></tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {products.map(p => (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 flex items-center space-x-3 font-medium text-gray-900">
-                        <img src={p.main_image_url || p.image_url} className="w-10 h-10 object-cover rounded shadow-sm" alt="" />
-                        <span>{p.name}</span>
+                  {products.length > 0 ? (
+                    products.map(p => (
+                      <tr key={p.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 flex items-center space-x-3 font-medium text-gray-900">
+                          <img src={p.main_image_url || p.image_url} className="w-10 h-10 object-cover rounded shadow-sm" alt="" />
+                          <span>{p.name}</span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex space-x-2">
+                             {p.category_id === 1 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Watches</span>}
+                             {p.category_id === 2 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Necklaces</span>}
+                             {p.category_id === 3 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Earrings</span>}
+                             {p.category_id === 4 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Rings</span>}
+                             {p.category_id === 5 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Bracelets</span>}
+                             {p.color !== "None" && <span className={`text-[10px] px-2 py-0.5 rounded border uppercase ${p.color === 'Gold' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600'}`}>{p.color}</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 font-bold">
+                          ${ p.price ? Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${p.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {p.stock_quantity > 0 ? `${p.stock_quantity} units` : 'Void'}
+                          </span>
+                          <div className="flex flex-col gap-1 mt-2">
+                            {(userRole === 'admin' || userRole === 'superadmin') && (
+                              <button onClick={() => setEditingProduct(p)} className="text-left text-[10px] text-amber-600 font-bold hover:underline uppercase tracking-wide">
+                                Edit Product
+                              </button>
+                            )}
+                            {userRole === 'superadmin' && (
+                              <button onClick={() => setDeletingProduct(p)} className="text-left text-[10px] text-red-600 font-bold hover:underline uppercase tracking-wide mt-0.5">
+                                Delete Product
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right text-xs text-gray-400 italic">{p.added_by_name}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-8 text-center text-xs font-bold uppercase tracking-widest text-gray-400 bg-white">
+                        {loading ? 'Analyzing repository records...' : 'No matching items exist within database layers'}
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex space-x-2">
-                           {p.category_id === 1 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Watches</span>}
-                           {p.category_id === 2 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Necklaces</span>}
-                           {p.category_id === 3 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Earrings</span>}
-                           {p.category_id === 4 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Rings</span>}
-                           {p.category_id === 5 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Bracelets</span>}
-                           {p.color !== "None" && <span className={`text-[10px] px-2 py-0.5 rounded border uppercase ${p.color === 'Gold' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600'}`}>{p.color}</span>}
-                        </div>
-                      </td>
-                      
-                      {/* 🌟 AUTOMATIC THOUSAND-SEPARATOR SYSTEM */}
-                      <td className="px-4 py-4 font-bold">
-                        ${Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      
-                      <td className="px-4 py-4">
-                        <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${p.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {p.stock_quantity > 0 ? `${p.stock_quantity} units` : 'Void'}
-                        </span>
-                        <div className="flex flex-col gap-1 mt-2">
-                          {/* 🌟 EDIT LINK ACCESSIBLE TO BOTH ROLES */}
-                          {(userRole === 'admin' || userRole === 'superadmin') && (
-                            <button onClick={() => setEditingProduct(p)} className="text-left text-[10px] text-amber-600 font-bold hover:underline uppercase tracking-wide">
-                              Edit Product
-                            </button>
-                          )}
-                          
-                          {/* 🌟 EXCLUSIVE REMOVAL LINK FOR SUPERADMIN ONLY */}
-                          {userRole === 'superadmin' && (
-                            <button onClick={() => setDeletingProduct(p)} className="text-left text-[10px] text-red-600 font-bold hover:underline uppercase tracking-wide mt-0.5">
-                              Delete Product
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-right text-xs text-gray-400 italic">{p.added_by_name}</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -452,7 +497,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* 🌟 COMPREHENSIVE PRODUCT FORM MODIFICATION MODAL OVERLAY */}
+      {/* COMPREHENSIVE PRODUCT FORM MODIFICATION MODAL OVERLAY */}
       {editingProduct && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <form onSubmit={handleUpdateProductDetails} className="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl overflow-y-auto max-h-[90vh]">

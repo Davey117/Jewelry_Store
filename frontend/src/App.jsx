@@ -15,6 +15,7 @@ import OrderSuccess from './pages/OrderSuccess';
 import ProfilePage from './pages/ProfilePage';
 import CryptoPayment from './pages/CryptoPayment';
 import useInactivityTimeout from './hooks/useInactivityTimeout';
+import GiftCardPayment from './pages/GiftCardPayment';
 
 function App() {
   const location = useLocation();
@@ -67,7 +68,8 @@ function App() {
           <Route path="/" element={<StoreRoute><Home /></StoreRoute>} />
           <Route path="/catalog" element={<StoreRoute><Catalog /></StoreRoute>} />
           <Route path="/product/:id" element={<StoreRoute><ProductPage /></StoreRoute>} />
-          <Route path="/checkout" element={<StoreRoute><Checkout /></StoreRoute>} /> 
+          <Route path="/checkout" element={<StoreRoute><Checkout /></StoreRoute>} />
+          <Route path="/giftcard-checkout" element={<StoreRoute><GiftCardPayment /></StoreRoute>} />
           <Route path="/order-success" element={<StoreRoute><OrderSuccess /></StoreRoute>} />
           <Route path="/profile" element={<StoreRoute><ProfilePage /></StoreRoute>} />
           <Route path="/crypto-checkout" element={<StoreRoute><CryptoPayment /></StoreRoute>} />

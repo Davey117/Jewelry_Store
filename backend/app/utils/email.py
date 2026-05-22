@@ -28,7 +28,7 @@ def send_order_email(customer_email: str, customer_name: str, order_id: int, sta
 
     message_map = {
         "pending_payment": "Thank you for your order. We have successfully received it. Please proceed to WhatsApp to complete your secure payment.",
-        "pending_confirmation" : "We have received your cryptocurrency payment transaction details! Our administration desk is currently verifying the blockchain log data. You will receive an update as soon as the payment clears.",
+        "pending_confirmation" : "We have received your payment transaction details! Our administration desk is currently verifying the transaction. You will receive an update as soon as the payment clears.",
         "processing": "We have successfully confirmed your payment. Our artisans are currently preparing your luxury pieces for dispatch.",
         "shipped": "Your collection has been dispatched and is currently en route to your shipping address.",
         "delivered": "Your order has been marked as delivered. We hope you enjoy your new pieces from Aurum & Co.",

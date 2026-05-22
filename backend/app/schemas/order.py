@@ -36,6 +36,29 @@ class OrderUserResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class CryptoPaymentSubmit(BaseModel):
+    crypto_currency: str
+    crypto_network: str
+    crypto_tx_hash: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class GiftCardSubmitItem(BaseModel):
+    card_type: str
+    code: str
+    claimed_amount: float
+
+# 🌟 Schema for viewing gift card details from the admin panel
+class GiftCardResponseItem(BaseModel):
+    id: int
+    order_id: int
+    card_type: str
+    code: str
+    claimed_amount: float
+    image_url: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 class OrderResponse(BaseModel):
     id: int
     user_id: int
@@ -50,12 +73,7 @@ class OrderResponse(BaseModel):
     crypto_currency: Optional[str] = None
     crypto_network: Optional[str] = None
     crypto_tx_hash: Optional[str] = None
+    gift_cards: List[GiftCardResponseItem] = []
 
     model_config = ConfigDict(from_attributes=True)
 
-class CryptoPaymentSubmit(BaseModel):
-    crypto_currency: str
-    crypto_network: str
-    crypto_tx_hash: Optional[str] = None
-
-    model_config = ConfigDict(from_attributes=True)

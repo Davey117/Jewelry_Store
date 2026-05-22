@@ -7,7 +7,7 @@ export default function Checkout() {
   const { cart, cartTotal, clearCart } = useCart();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('crypto'); // 🌟 Added payment tracking state Defaulting to crypto
+  const [paymentMethod, setPaymentMethod] = useState('crypto'); 
   const token = localStorage.getItem('token'); 
 
   useEffect(() => {
@@ -35,10 +35,8 @@ export default function Checkout() {
     setIsProcessing(true);
 
     try {
-      // 🌟 Consolidate shipping address object properties into a standardized string
       const fullShippingAddress = `${formData.address}, ${formData.city}, ${formData.zip}`;
 
-      // 🌟 Update Payload mapping parameters to match your new FastAPI Pydantic schema validation rules
       const orderData = {
         total_amount: cartTotal,
         payment_method: paymentMethod, 
@@ -50,14 +48,10 @@ export default function Checkout() {
         }))
       };
 
-      // Fire order allocation schema down to the database infrastructure
       const response = await createOrder(orderData);
-      
-      // Handle fallback resolution values across Axios configurations safely
       const orderId = response?.id || response?.data?.id || response?.data?.order_id;
 
       if (paymentMethod === 'crypto') {
-        // 🌟 CLEAR THE CART CONTEXT AND ROUTE DIRECTLY TO YOUR NEW CRYPTO INSTRUCTIONS FLOW
         clearCart();
         navigate('/crypto-checkout', { 
           state: { 
@@ -65,11 +59,18 @@ export default function Checkout() {
             totalAmount: cartTotal 
           } 
         });
+      } else if (paymentMethod === 'gift_card') {
+        // 🌟 ROUTE DIRECTLY TO YOUR NEW INTERNATIONAL RETAIL GIFTCARD PORTAL
+        clearCart();
+        navigate('/giftcard-checkout', {
+          state: {
+            orderId: orderId,
+            totalAmount: cartTotal
+          }
+        });
       } else {
-        // WhatsApp Legacy Manual Execution fallback channel 
         const adminWhatsAppNumber = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER || "234XXXXXXXXXX"; 
         
-        // Use clean template strings without manual inline %0A parameters
         const clearTextMessage = `Hello Aurum & Co., I just placed a manual invoice order!\n\n` +
           `*Order ID:* #${orderId || "Pending"}\n` +
           `*Name:* ${formData.firstName} ${formData.lastName}\n` +
@@ -77,7 +78,6 @@ export default function Checkout() {
           `*Email:* ${formData.email}\n\n` +
           `_Please provide manual payment instructions._`;
 
-        // 🌟 FIX: encodeURIComponent completely eliminates raw parameter space string breakages!
         const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(clearTextMessage)}`;
 
         clearCart();
@@ -144,7 +144,7 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* 🌟 LUXURY PAYMENT METHOD SELECTOR SYSTEM COMPONENT */}
+            {/* LUXURY PAYMENT METHOD SELECTOR SYSTEM COMPONENT */}
             <div>
               <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-4">Select Payment Method</h2>
               <div className="space-y-3">
@@ -163,7 +163,21 @@ export default function Checkout() {
                   </div>
                 </label>
 
-                {/* Option B: WhatsApp Invoice Checkouts */}
+                {/* Option B: Gift Card Payment Method */}
+                <label className={`flex items-center justify-between p-4 border transition cursor-pointer select-none ${paymentMethod === 'gift_card' ? 'border-amber-600 bg-amber-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className="flex items-center space-x-3">
+                    <input type="radio" name="payment_method" value="gift_card" checked={paymentMethod === 'gift_card'} onChange={() => setPaymentMethod('gift_card')} className="text-amber-600 focus:ring-0" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-900">International Gift Cards</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Settle balance with Apple, Razer Gold, Steam, or Amazon cards.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 text-xs font-mono font-medium text-gray-400">
+                    <span>APPLE</span><span>•</span><span>STEAM</span>
+                  </div>
+                </label>
+
+                {/* Option C: WhatsApp Invoice Checkouts */}
                 <label className={`flex items-center justify-between p-4 border transition cursor-pointer select-none ${paymentMethod === 'whatsapp' ? 'border-amber-600 bg-amber-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
                   <div className="flex items-center space-x-3">
                     <input type="radio" name="payment_method" value="whatsapp" checked={paymentMethod === 'whatsapp'} onChange={() => setPaymentMethod('whatsapp')} className="text-amber-600 focus:ring-0" />
@@ -172,6 +186,18 @@ export default function Checkout() {
                       <p className="text-[11px] text-gray-500 mt-0.5">Place order database tracking logs and finish details with an agent manually.</p>
                     </div>
                   </div>
+                </label>
+
+                {/* Option D: Credit/Debit Card (Coming Soon) */}
+                <label className="flex items-center justify-between p-4 border border-gray-150 bg-gray-50/50 opacity-60 cursor-not-allowed select-none">
+                  <div className="flex items-center space-x-3">
+                    <input type="radio" name="payment_method" value="card" disabled className="text-gray-300 focus:ring-0 cursor-not-allowed" />
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 line-through">Credit / Debit Card</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Secure payment via Visa, Mastercard, or American Express gateways.</p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] bg-gray-200 text-gray-600 font-bold px-2 py-0.5 rounded uppercase tracking-wider">Coming Soon</span>
                 </label>
 
               </div>
