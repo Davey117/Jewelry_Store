@@ -26,14 +26,15 @@ export default function Catalog() {
           fetchPublicProducts(),
           fetchCategories()
         ]);
-        
-        setCategories(catData);
+        const standardProdData = prodData.filter(p => p.category_id >= 1 && p.category_id <= 5);
+        const standardCatData = catData.filter(c => c.id >= 1 && c.id <= 5);
+        setCategories(standardCatData);
 
         if (activeCatId) {
-          const filtered = prodData.filter(p => Number(p.category_id) === Number(activeCatId));
+          const filtered = standardProdData.filter(p => Number(p.category_id) === Number(activeCatId));
           setProducts(filtered);
         } else {
-          setProducts(prodData);
+          setProducts(standardProdData);
         }
       } catch (err) {
         console.error("Catalog Load Error:", err);

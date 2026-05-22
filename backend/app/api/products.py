@@ -41,6 +41,7 @@ async def create_product(
     stock_quantity: int = Form(...),
     category_id: int = Form(...),
     color: str = Form(...),
+    size: Optional[str] = Form(None), # 🌟 ADD THIS LINE
     main_image: UploadFile = File(...),
     images: List[UploadFile] = File(default=[]), 
     db: Session = Depends(get_db), 
@@ -69,7 +70,7 @@ async def create_product(
         color=color,
         main_image_url=main_img_url,  
         additional_images=additional_urls, 
-        added_by_id=current_user.id
+        added_by_id=current_user.id,
     )
     
     db.add(new_product)

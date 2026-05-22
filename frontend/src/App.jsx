@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import CryptoPayment from './pages/CryptoPayment';
 import useInactivityTimeout from './hooks/useInactivityTimeout';
 import GiftCardPayment from './pages/GiftCardPayment';
+import ChildrenCatalog from './pages/ChildrenCatalog';
 
 function App() {
   const location = useLocation();
@@ -73,6 +74,7 @@ function App() {
           <Route path="/order-success" element={<StoreRoute><OrderSuccess /></StoreRoute>} />
           <Route path="/profile" element={<StoreRoute><ProfilePage /></StoreRoute>} />
           <Route path="/crypto-checkout" element={<StoreRoute><CryptoPayment /></StoreRoute>} />
+          <Route path="/children-day" element={<StoreRoute><ChildrenCatalog /></StoreRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />

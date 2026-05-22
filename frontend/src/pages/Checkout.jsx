@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { createOrder } from '../services/api';
 
 export default function Checkout() {
-  const { cart, cartTotal, clearCart } = useCart();
+  const { cart, clearCart } = useCart();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('crypto'); 
@@ -30,6 +30,39 @@ export default function Checkout() {
     zip: ''
   });
 
+  // 🌟 DYNAMIC PRICING ENGINE FOR CHILDREN'S DAY CAMPAIGN (Categories 6-12)
+  const getDynamicCartSummary = () => {
+    let computedTotal = 0;
+    // Check if current payment configuration unlocks the promotional discount
+    const isPromoEligiblePayment = paymentMethod === 'gift_card' || paymentMethod === 'crypto';
+
+    const processedItems = cart.map(item => {
+      const isCampaignItem = item.category_id >= 6 && item.category_id <= 12;
+      const finalUnitPrice = (isPromoEligiblePayment && isCampaignItem) ? item.price * 0.5 : item.price;
+      const lineTotal = finalUnitPrice * item.quantity;
+      
+      computedTotal += lineTotal;
+
+      return {
+        ...item,
+        isDiscounted: isPromoEligiblePayment && isCampaignItem,
+        promoUnitPrice: finalUnitPrice,
+        promoLineTotal: lineTotal
+      };
+    });
+
+    const hasCampaignItemsInBag = cart.some(item => item.category_id >= 6 && item.category_id <= 12);
+
+    return {
+      finalTotal: computedTotal,
+      processedItems,
+      hasCampaignItemsInBag,
+      isPromoActive: isPromoEligiblePayment && hasCampaignItemsInBag
+    };
+  };
+
+  const { finalTotal, processedItems, hasCampaignItemsInBag, isPromoActive } = getDynamicCartSummary();
+
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -38,13 +71,13 @@ export default function Checkout() {
       const fullShippingAddress = `${formData.address}, ${formData.city}, ${formData.zip}`;
 
       const orderData = {
-        total_amount: cartTotal,
+        total_amount: finalTotal, // 🌟 Sends matching promotional calculation to backend validation layer
         payment_method: paymentMethod, 
         shipping_address: fullShippingAddress,
-        items: cart.map(item => ({ 
+        items: processedItems.map(item => ({ 
           product_id: item.id, 
           quantity: item.quantity, 
-          price_at_purchase: item.price 
+          price_at_purchase: item.promoUnitPrice 
         }))
       };
 
@@ -52,20 +85,17 @@ export default function Checkout() {
       const orderId = response?.id || response?.data?.id || response?.data?.order_id;
 
       if (paymentMethod === 'crypto') {
-        clearCart();
         navigate('/crypto-checkout', { 
           state: { 
             orderId: orderId, 
-            totalAmount: cartTotal 
+            totalAmount: finalTotal 
           } 
         });
       } else if (paymentMethod === 'gift_card') {
-        // 🌟 ROUTE DIRECTLY TO YOUR NEW INTERNATIONAL RETAIL GIFTCARD PORTAL
-        clearCart();
         navigate('/giftcard-checkout', {
           state: {
             orderId: orderId,
-            totalAmount: cartTotal
+            totalAmount: finalTotal
           }
         });
       } else {
@@ -74,13 +104,11 @@ export default function Checkout() {
         const clearTextMessage = `Hello Aurum & Co., I just placed a manual invoice order!\n\n` +
           `*Order ID:* #${orderId || "Pending"}\n` +
           `*Name:* ${formData.firstName} ${formData.lastName}\n` +
-          `*Total:* $${cartTotal.toFixed(2)}\n` +
+          `*Total:* $${finalTotal.toFixed(2)}\n` +
           `*Email:* ${formData.email}\n\n` +
           `_Please provide manual payment instructions._`;
 
         const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(clearTextMessage)}`;
-
-        clearCart();
         window.open(whatsappUrl, '_blank');
         navigate('/order-success');
       }
@@ -158,8 +186,15 @@ export default function Checkout() {
                       <p className="text-[11px] text-gray-500 mt-0.5">Pay via BTC, ETH, USDT, USDC or TRON immediately.</p>
                     </div>
                   </div>
-                  <div className="flex gap-1.5 text-xs font-mono font-medium text-gray-400">
-                    <span>BTC</span><span>•</span><span>USDT</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex gap-1.5 text-xs font-mono font-medium text-gray-400">
+                      <span>BTC</span><span>•</span><span>USDT</span>
+                    </div>
+                    {hasCampaignItemsInBag && (
+                      <span className="text-[9px] bg-rose-600 text-white font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        -50% Active
+                      </span>
+                    )}
                   </div>
                 </label>
 
@@ -172,8 +207,15 @@ export default function Checkout() {
                       <p className="text-[11px] text-gray-500 mt-0.5">Settle balance with Apple, Razer Gold, Steam, or Amazon cards.</p>
                     </div>
                   </div>
-                  <div className="flex gap-1.5 text-xs font-mono font-medium text-gray-400">
-                    <span>APPLE</span><span>•</span><span>STEAM</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex gap-1.5 text-xs font-mono font-medium text-gray-400">
+                      <span>APPLE</span><span>•</span><span>STEAM</span>
+                    </div>
+                    {hasCampaignItemsInBag && (
+                      <span className="text-[9px] bg-rose-600 text-white font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        -50% Active
+                      </span>
+                    )}
                   </div>
                 </label>
 
@@ -223,7 +265,7 @@ export default function Checkout() {
           <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-6 border-b border-gray-200 pb-4">Order Summary</h2>
           
           <div className="space-y-4 mb-6 max-h-96 overflow-y-auto pr-2">
-            {cart.map(item => (
+            {processedItems.map(item => (
               <div key={item.id} className="flex justify-between items-center text-sm">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
@@ -232,22 +274,43 @@ export default function Checkout() {
                       {item.quantity}
                     </span>
                   </div>
-                  <div>
-                    <p className="font-serif text-gray-900">{item.name}</p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">{item.color !== 'None' ? item.color : ''}</p>
+                  <div className="min-w-0 max-w-[180px]">
+                    <p className="font-serif text-gray-900 truncate">{item.name}</p>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {item.color !== 'None' && <span className="text-[9px] text-gray-500 uppercase tracking-widest">{item.color}</span>}
+                      {item.chosenSize && <span className="text-[9px] bg-stone-200 text-stone-800 px-1 font-mono rounded">{item.chosenSize}</span>}
+                    </div>
                   </div>
                 </div>
-                <p className="font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                <div className="text-right font-mono">
+                  {item.isDiscounted ? (
+                    <div className="flex flex-col">
+                      <span className="text-xs text-rose-600 font-bold">${item.promoLineTotal.toFixed(2)}</span>
+                      <span className="text-[10px] text-gray-300 line-through">${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <p className="font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
+          {/* 🌟 CONDITIONAL CAMPAIGN REMINDER BANNER */}
+          {isPromoActive && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 p-3 rounded text-center">
+              <p className="text-[10px] text-amber-900 uppercase tracking-wider font-bold">
+                ⚡ Campaign Slash Active: A 50% promotional markdown has been calculated for the child items in your cart.
+              </p>
+            </div>
+          )}
+
           <div className="border-t border-gray-200 pt-4 space-y-3 text-sm text-gray-600">
-            <div className="flex justify-between"><span>Subtotal</span><span>${cartTotal.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Complimentary Shipping</span><span>$0.00</span></div>
+            <div className="flex justify-between"><span>Subtotal</span><span className="font-mono">${finalTotal.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Complimentary Shipping</span><span className="font-mono">$0.00</span></div>
             <div className="flex justify-between font-bold text-lg text-gray-900 pt-4 border-t border-gray-200 mt-4">
               <span>Total</span>
-              <span>${cartTotal.toFixed(2)}</span>
+              <span className="font-mono text-gray-900">${finalTotal.toFixed(2)}</span>
             </div>
           </div>
         </div>

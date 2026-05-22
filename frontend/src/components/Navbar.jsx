@@ -127,6 +127,14 @@ export default function Navbar() {
         <Link to="/" className="hover:text-amber-600 transition">Home</Link>
         <Link to="/catalog" className="hover:text-amber-600 transition">Catalog</Link>
         
+        {/* 🌟 PLAYFUL ANIMATED CAMPAIGN ROUTE LINK FOR KIDS */}
+        <Link 
+          to="/children-day" 
+          className="text-rose-500 hover:text-rose-600 font-extrabold tracking-widest transition duration-300 animate-pulse whitespace-nowrap flex items-center gap-1 bg-rose-50 px-2.5 py-1 rounded border border-rose-100 hover:shadow-sm"
+        >
+          🧸 Kids Vault
+        </Link>
+        
         {token ? (
           <div className="flex items-center space-x-3 md:space-x-4">
             {(userRole === 'admin' || userRole === 'super_admin' || userRole === 'superadmin') && (

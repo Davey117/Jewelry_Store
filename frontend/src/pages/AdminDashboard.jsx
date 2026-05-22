@@ -35,10 +35,10 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // --- NEW PRODUCT OBJECT ---
+  // --- NEW PRODUCT OBJECT (🌟 Size Field Added) ---
   const [newProduct, setNewProduct] = useState({ 
     name: '', description: '', price: '', stock_quantity: '', 
-    category_id: '', color: 'None', main_image: null, 
+    category_id: '', color: 'None', size: '', main_image: null, 
     image_2: null, image_3: null, image_4: null 
   });
 
@@ -135,6 +135,7 @@ export default function AdminDashboard() {
     formData.append('stock_quantity', newProduct.stock_quantity);
     formData.append('category_id', newProduct.category_id);
     formData.append('color', newProduct.color);
+    if (newProduct.size) formData.append('size', newProduct.size); // 🌟 Appending size parameter securely
     formData.append('main_image', newProduct.main_image);
     
     formData.append('images', newProduct.main_image);
@@ -144,7 +145,7 @@ export default function AdminDashboard() {
 
     try {
       await createProduct(formData);
-      setNewProduct({ name: '', description: '', price: '', stock_quantity: '', category_id: '', color: 'None', main_image: null, image_2: null, image_3: null, image_4: null });
+      setNewProduct({ name: '', description: '', price: '', stock_quantity: '', category_id: '', color: 'None', size: '', main_image: null, image_2: null, image_3: null, image_4: null });
       setShowAddProduct(false);
       loadProducts(searchTerm); 
     } catch (err) {
@@ -168,6 +169,7 @@ export default function AdminDashboard() {
         stock_quantity: parseInt(editingProduct.stock_quantity),
         category_id: parseInt(editingProduct.category_id),
         color: editingProduct.color,
+        size: editingProduct.size || null, // 🌟 Passing size variations
         description: editingProduct.description
       });
       setEditingProduct(null); 
@@ -205,6 +207,12 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
+  };
+
+  // Helper to resolve category name seamlessly
+  const getCategoryName = (categoryId) => {
+    const match = categories.find(cat => cat.id === parseInt(categoryId));
+    return match ? match.name : `Category #${categoryId}`;
   };
 
   return (
@@ -260,7 +268,7 @@ export default function AdminDashboard() {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
               <h3 className="text-sm font-bold text-gray-700 uppercase">Catalog Management</h3>
               
-              {/* 🌟 INLINE LIVE SEARCH ELEMENT COMPONENT */}
+              {/* INLINE LIVE SEARCH ELEMENT COMPONENT */}
               <div className="relative w-full sm:w-72">
                 <div className="flex items-center border border-gray-200 px-3 py-1.5 bg-gray-50 rounded focus-within:border-amber-600 transition">
                   <input
@@ -294,7 +302,7 @@ export default function AdminDashboard() {
                   <input type="number" step="0.01" required value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className="px-3 py-2 border rounded text-sm" placeholder="Price ($)" />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                   <select 
                     required 
                     value={newProduct.category_id} 
@@ -302,23 +310,28 @@ export default function AdminDashboard() {
                     className="px-3 py-2 border rounded text-sm bg-white"
                   >
                     <option value="">Select Category</option>
-                    <option value="4">Rings</option>
-                    <option value="2">Necklaces</option>
-                    <option value="1">Watches</option>
-                    <option value="3">Earrings</option>
-                    <option value="5">Bracelets</option>
+                    {/* 🌟 DYNAMIC RENDERING: Automatically shows all database categories (including 6-12) */}
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
 
-                  <select 
-                    required 
+                  <input 
+                    type="text" 
                     value={newProduct.color} 
                     onChange={e => setNewProduct({...newProduct, color: e.target.value})} 
-                    className="px-3 py-2 border rounded text-sm bg-white"
-                  >
-                    <option value="None">Material: None</option>
-                    <option value="Gold">Gold</option>
-                    <option value="Silver">Silver</option>
-                  </select>
+                    className="px-3 py-2 border rounded text-sm bg-white" 
+                    placeholder="Color (e.g. Gold, Silver, Red)"
+                  />
+
+                  {/* 🌟 NEW INPUT FIELD: Size tracking capability */}
+                  <input 
+                    type="text" 
+                    value={newProduct.size} 
+                    onChange={e => setNewProduct({...newProduct, size: e.target.value})} 
+                    className="px-3 py-2 border rounded text-sm bg-white" 
+                    placeholder="Size (e.g. 14 inch, Youth M, EU 32) [Optional]"
+                  />
                 </div>
 
                 <textarea required value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full px-3 py-2 border rounded text-sm mb-4 h-20" placeholder="Product Details..."></textarea>
@@ -374,17 +387,26 @@ export default function AdminDashboard() {
                           <span>{p.name}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="flex space-x-2">
-                             {p.category_id === 1 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Watches</span>}
-                             {p.category_id === 2 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Necklaces</span>}
-                             {p.category_id === 3 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Earrings</span>}
-                             {p.category_id === 4 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Rings</span>}
-                             {p.category_id === 5 && <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase">Bracelets</span>}
-                             {p.color !== "None" && <span className={`text-[10px] px-2 py-0.5 rounded border uppercase ${p.color === 'Gold' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600'}`}>{p.color}</span>}
+                          <div className="flex flex-wrap gap-1.5 max-w-xs">
+                             {/* 🌟 REFACTORED CATEGORY DISPLAY: Pulls name organically */}
+                             <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded border uppercase text-gray-700 font-medium">
+                               {getCategoryName(p.category_id)}
+                             </span>
+                             {p.color && p.color !== "None" && (
+                               <span className={`text-[10px] px-2 py-0.5 rounded border uppercase font-medium ${p.color === 'Gold' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600'}`}>
+                                 {p.color}
+                               </span>
+                             )}
+                             {/* 🌟 SIZE BADGE: Shows inside data table grid if specified */}
+                             {p.size && (
+                               <span className="text-[10px] bg-stone-900 text-white px-2 py-0.5 rounded border uppercase font-mono tracking-wider">
+                                 {p.size}
+                               </span>
+                             )}
                           </div>
                         </td>
                         <td className="px-4 py-4 font-bold">
-                          ${ p.price ? Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                          ${p.price ? Number(p.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                         </td>
                         <td className="px-4 py-4">
                           <span className={`px-2 py-1 text-[10px] font-bold rounded uppercase ${p.stock_quantity > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -520,24 +542,24 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Collection Category</label>
                   <select required value={editingProduct.category_id} onChange={e => setEditingProduct({...editingProduct, category_id: e.target.value})} className="w-full px-3 py-2 border rounded text-sm bg-white outline-none">
-                    <option value="4">Rings</option>
-                    <option value="2">Necklaces</option>
-                    <option value="1">Watches</option>
-                    <option value="3">Earrings</option>
-                    <option value="5">Bracelets</option>
+                    {/* 🌟 DYNAMIC RENDERING: Maps all updated custom database categories during edits */}
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Material Classification</label>
-                  <select required value={editingProduct.color} onChange={e => setEditingProduct({...editingProduct, color: e.target.value})} className="w-full px-3 py-2 border rounded text-sm bg-white outline-none">
-                    <option value="None">Material: None</option>
-                    <option value="Gold">Gold</option>
-                    <option value="Silver">Silver</option>
-                  </select>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Color / Tone</label>
+                  <input type="text" required value={editingProduct.color} onChange={e => setEditingProduct({...editingProduct, color: e.target.value})} className="w-full px-3 py-2 border rounded text-sm outline-none" />
+                </div>
+                {/* 🌟 COMPONENT ADDITION: Edit size specifications */}
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-gray-400 block mb-1">Size Metric</label>
+                  <input type="text" value={editingProduct.size || ''} onChange={e => setEditingProduct({...editingProduct, size: e.target.value})} className="w-full px-3 py-2 border rounded text-sm outline-none font-mono" placeholder="e.g. XL" />
                 </div>
               </div>
 

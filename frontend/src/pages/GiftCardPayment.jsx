@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { submitGiftCards } from '../services/api';
+import { useCart } from '../context/CartContext'; // 🌟 Added to control persistent cart state lifecycle
+import axios from 'axios'; // 🌟 Added for direct cancellation mapping calls
 
 export default function GiftCardPayment() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { clearCart } = useCart(); // 🌟 Pull clearCart into execution workspace context
 
   // Extract order constraints from router navigation state context
   const { orderId, totalAmount } = location.state || {};
@@ -13,10 +16,12 @@ export default function GiftCardPayment() {
     { card_type: 'Apple', code: '', claimed_amount: '', image: null }
   ]);
   const [loading, setLoading] = useState(false);
+  const [isAborting, setIsAborting] = useState(false); // 🌟 State tracker for transaction reversal pipeline
   const [error, setError] = useState('');
 
   const cardOptions = ['Apple', 'Razer Gold', 'Steam', 'Amazon', 'Sephora', 'Nordstrom'];
   const ADMIN_WHATSAPP_NUMBER = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER || "234XXXXXXXXXX";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
   // Prevent crashes if page is direct refreshed without active checkout context
   if (!orderId) {
@@ -56,6 +61,24 @@ export default function GiftCardPayment() {
     return giftCards.reduce((sum, card) => sum + (parseFloat(card.claimed_amount) || 0), 0);
   };
 
+  // 🌟 Rollback unfulfilled order context and seamlessly return to checkout workspace
+  const handleCancelAndReturn = async () => {
+    setIsAborting(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_BASE_URL}/orders/${orderId}/cancel`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      navigate('/checkout');
+    } catch (err) {
+      console.error("Failed to cancel unfulfilled transaction:", err);
+      setError("Error returning to checkout. Please check structural network links.");
+    } finally {
+      setIsAborting(false);
+    }
+  };
+
   // 🌟 Generates pre-filled text summary containing details of all added cards
   const generateWhatsAppUrl = () => {
     let cardsSummary = '';
@@ -91,6 +114,7 @@ export default function GiftCardPayment() {
     try {
       const data = await submitGiftCards(orderId, formData);
       alert(data.message);
+      clearCart(); // 🌟 Clear cart ONLY when digital proofs upload successfully
       navigate('/order-success');
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to submit gift card validation structures.');
@@ -119,6 +143,7 @@ export default function GiftCardPayment() {
               {giftCards.length > 1 && (
                 <button
                   type="button"
+                  disabled={loading || isAborting}
                   onClick={() => removeCardRow(index)}
                   className="absolute top-4 right-4 text-gray-400 hover:text-red-600 text-[10px] font-bold uppercase tracking-widest transition"
                 >
@@ -183,6 +208,7 @@ export default function GiftCardPayment() {
           <div className="flex justify-between items-center pt-4 border-b border-gray-100 pb-6">
             <button
               type="button"
+              disabled={loading || isAborting}
               onClick={addCardRow}
               className="px-5 py-3 border border-gray-950 text-gray-950 font-bold text-[10px] uppercase tracking-widest hover:bg-gray-50 transition"
             >
@@ -208,10 +234,20 @@ export default function GiftCardPayment() {
           {/* Master Server Submit */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isAborting}
             className="w-full py-4 bg-gray-950 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition disabled:bg-gray-300 shadow-md"
           >
             {loading ? 'Uploading Digital Proofs...' : 'Submit Payment for Verification'}
+          </button>
+
+          {/* 🌟 ESCAPE PIPELINE TRICK LINK OUT BUTTON */}
+          <button
+            type="button"
+            disabled={isAborting || loading}
+            onClick={handleCancelAndReturn}
+            className="w-full py-3 border border-gray-300 text-gray-600 rounded text-[10px] uppercase tracking-widest font-bold hover:bg-gray-50 transition disabled:opacity-50"
+          >
+            {isAborting ? 'Restoring Cart Matrix...' : '← Change Payment Method'}
           </button>
         </form>
 

@@ -15,6 +15,10 @@ export default function ProductPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState('');
 
+  // 🌟 Size Variation Selection States
+  const [selectedSize, setSelectedSize] = useState('');
+  const [sizeError, setSizeError] = useState('');
+
   const token = localStorage.getItem('token');
 
   const loadReviews = async () => {
@@ -71,6 +75,26 @@ export default function ProductPage() {
       </div>
     );
   }
+
+  // 🌟 Process comma-separated size attributes safely into selection targets
+  const availableSizes = product.size ? product.size.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  // 🌟 Determine if item belongs to the Children's Day dynamic campaign layer (IDs 6 to 12)
+  const isCampaignProduct = product.category_id >= 6 && product.category_id <= 12;
+  const promoPrice = product.price * 0.5;
+
+  // 🌟 Intercept cart dispatch sequence to validate selected sizing metrics
+  const handleAddToCart = () => {
+    if (availableSizes.length > 0 && !selectedSize) {
+      setSizeError('Please select a size variation before adding this item to your bag.');
+      return;
+    }
+    setSizeError('');
+    addToCart({
+      ...product,
+      chosenSize: selectedSize || null // Appends size specifications cleanly to globally managed line records
+    });
+  };
 
   const galleryImages = [
     product.main_image_url || product.image_url,
@@ -162,9 +186,25 @@ export default function ProductPage() {
           </div>
 
           <h1 className="text-2xl md:text-5xl font-serif text-gray-900 mb-4 md:mb-6 leading-tight uppercase tracking-wide">{product.name}</h1>
-          <p className="text-2xl font-bold text-gray-900 tracking-wider mb-8">
-            ${Number(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
+          
+          {/* 🌟 REFACTORED PRICE LAYER WITH DYNAMIC CAMPAIGN MATCHES */}
+          <div className="mb-8">
+            {isCampaignProduct ? (
+              <div className="space-y-1.5">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-3xl font-mono font-bold text-rose-600">${promoPrice.toFixed(2)}</span>
+                  <span className="text-sm font-mono text-gray-400 line-through">${Number(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest bg-amber-50 border border-amber-200 px-3 py-1.5 inline-block rounded">
+                  ⚡ 50% discount will automatically apply if settled via Gift Cards or Cryptocurrency payment options.
+                </p>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-gray-900 tracking-wider">
+                ${Number(product.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            )}
+          </div>
           
           <div className="w-full h-px bg-gray-200 mb-8"></div>
           
@@ -183,9 +223,51 @@ export default function ProductPage() {
             )}
           </div>
 
+          {/* 🌟 STEP 3 ADAPTATION: DYNAMIC CAMPAIGN SIZE SELECTION GRID */}
+          {availableSizes.length > 0 && (
+            <div className="mb-8 pt-4 border-t border-gray-100">
+              <div className="flex justify-between items-center mb-3">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Select Size Metric
+                </label>
+                {selectedSize && (
+                  <span className="text-[10px] font-mono text-amber-700 font-bold uppercase tracking-wider bg-amber-50 px-2 py-0.5 border border-amber-100 rounded">
+                    Selected: {selectedSize}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {availableSizes.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSize(size);
+                      setSizeError('');
+                    }}
+                    className={`px-4 py-2.5 text-xs font-mono tracking-wide transition-all duration-150 border text-center min-w-[55px] rounded ${
+                      selectedSize === size
+                        ? 'bg-gray-950 text-white border-gray-950 shadow-sm font-bold'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400 hover:text-gray-950'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+
+              {sizeError && (
+                <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider mt-3 flex items-center gap-1 animate-pulse">
+                  ⚠️ {sizeError}
+                </p>
+              )}
+            </div>
+          )}
+
           <button 
             disabled={product.stock_quantity === 0}
-            onClick={() => addToCart(product)}
+            onClick={handleAddToCart}
             className={`w-full py-4 text-xs uppercase tracking-[0.2em] font-bold transition shadow-lg ${
               product.stock_quantity === 0 
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 

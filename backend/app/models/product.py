@@ -22,14 +22,12 @@ class Product(Base):
     stock_quantity = Column(Integer, default=0)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False) # ✨ Now Required!
     is_active = Column(Boolean, default=True, nullable=False)
-    
-    # ✨ NEW FIELDS
-    color = Column(String, default="None") # Gold, Silver, None
+    color = Column(String, nullable=False, default="None") # Gold, Silver, None
     main_image_url = Column(String, nullable=True)
     additional_images = Column(JSON, default=list) # Stores a list of extra image links
-    
     created_at = Column(DateTime, default=datetime.utcnow)
     added_by_id = Column(Integer, ForeignKey("users.id"))
+    size = Column(String, nullable=True)
 
     # Relationships
     category = relationship("Category", back_populates="products")

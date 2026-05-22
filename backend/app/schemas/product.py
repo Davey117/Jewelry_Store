@@ -1,7 +1,9 @@
+# backend/app/schemas/product.py
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+# --- CATEGORY SCHEMAS ---
 class CategoryBase(BaseModel):
     name: str
 
@@ -14,18 +16,16 @@ class CategoryResponse(CategoryBase):
     class Config:
         from_attributes = True
 
-class ProductBase(BaseModel):
+
+# --- PRODUCT SCHEMAS ---
+class ProductCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str
     price: float
     stock_quantity: int
-    category_id: int # ✨ Required
-    color: str # ✨ Required
-    main_image_url: Optional[str] = None
-    additional_images: Optional[List[str]] = [] # ✨ List of strings
-
-class ProductCreate(ProductBase):
-    pass
+    category_id: int
+    color: str
+    size: Optional[str] = None  # 🌟 Added
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -34,16 +34,26 @@ class ProductUpdate(BaseModel):
     stock_quantity: Optional[int] = None
     category_id: Optional[int] = None
     color: Optional[str] = None
+    size: Optional[str] = None  # 🌟 Added
     is_active: Optional[bool] = None
     main_image_url: Optional[str] = None
     additional_images: Optional[List[str]] = None
 
-class ProductResponse(ProductBase):
+class ProductResponse(BaseModel):
     id: int
+    name: str
+    description: str
+    price: float
+    stock_quantity: int
+    category_id: int
+    color: str
+    size: Optional[str] = None  # 🌟 Added
+    main_image_url: Optional[str] = None
+    additional_images: List[str] = []
     is_active: bool
     category: Optional[CategoryResponse] = None
-    added_by_name: str 
-    created_at: datetime
+    created_at: Optional[datetime] = None
+    added_by_id: Optional[int] = None
     added_by_name: Optional[str] = "Unknown"
 
     class Config:

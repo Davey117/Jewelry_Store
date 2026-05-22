@@ -1,40 +1,41 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useCart } from "../context/CartContext"; // 🌟 Added to control persistent cart state lifecycle
 
 // 1. Define your Crypto & Network Config Matrix
 const CRYPTO_CONFIG = {
   Bitcoin: {
     networks: {
-      "Bitcoin Main Network": "bc1qyourrealbitcoinaddresshere", // ✏️ Replace with your wallet
+      "Bitcoin Main Network": "bc1qc6nvan8t0c02dge4qfaf3s7a6mhzjz84wspn8h", 
       "Lightning Network": "", // Empty string defaults to "Available Soon"
     },
   },
   Ethereum: {
     networks: {
-      "Ethereum Mainnet (ERC-20)": "0xyourrealethereumaddresshere", 
-      "Arbitrum": "",
-      "Optimism": "",
-      "Base": "",
+      "Ethereum Mainnet (ERC-20)": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1", 
+      "Arbitrum": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1",
+      "Optimism": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1",
+      "Base": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1",
     },
   },
   USDT: {
     networks: {
-      "TRON (TRC-20)": "Tyourrealtronusdtaddresshere",
-      "Ethereum (ERC-20)": "0xyourrealethereumaddresshere",
-      "BNB Smart Chain (BEP-20)": "",
+      "TRON (TRC-20)": "TLDeGoepazgsDxxfYUmbhJLKtRpi9K2xeZ",
+      "Ethereum (ERC-20)": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1",
+      "BNB Smart Chain (BEP-20)": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1",
     },
   },
   USDC: {
     networks: {
-      "Ethereum (ERC-20)": "0xyourrealethereumaddresshere",
-      "Solana": "",
-      "Polygon": "",
+      "Ethereum (ERC-20)": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1",
+      "Solana": "9znFrY1oU2J2hmcSFdpeanzqqfXKAdDL4iTYpkmu8NJh",
+      "Polygon": "0x8c0bF67d8189E4c01338bec05A9DFfC8FE7b74a1",
     },
   },
   TRON: {
     networks: {
-      "TRON Network (TRC-20)": "Tyourrealtronaddresshere",
+      "TRON Network (TRC-20)": "TLDeGoepazgsDxxfYUmbhJLKtRpi9K2xeZ",
     },
   },
 };
@@ -42,6 +43,7 @@ const CRYPTO_CONFIG = {
 export default function CryptoPayment() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { clearCart } = useCart(); // 🌟 Pull clearCart into execution workspace context
 
   // Extract order constraints passed from your main checkout page routing context
   const { orderId, totalAmount } = location.state || { orderId: null, totalAmount: 0 };
@@ -52,11 +54,13 @@ export default function CryptoPayment() {
   const [txHash, setTxHash] = useState("");
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAborting, setIsAborting] = useState(false); // 🌟 State tracker for transaction reversal pipeline
   const [error, setError] = useState("");
 
   // Configuration Constants
   const ADMIN_WHATSAPP_NUMBER = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER; 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+  
   // Dynamic Resolution Handlers
   const availableNetworks = selectedCrypto ? Object.keys(CRYPTO_CONFIG[selectedCrypto].networks) : [];
   const walletAddress = (selectedCrypto && selectedNetwork) 
@@ -89,6 +93,24 @@ export default function CryptoPayment() {
     return `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(messageTemplate)}`;
   };
 
+  // 🌟 Rollback unfulfilled order context and seamlessly return to checkout workspace
+  const handleCancelAndReturn = async () => {
+    setIsAborting(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_BASE_URL}/orders/${orderId}/cancel`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      navigate('/checkout');
+    } catch (err) {
+      console.error("Failed to cancel unfulfilled transaction:", err);
+      setError("Error returning to checkout. Please check structural network links.");
+    } finally {
+      setIsAborting(false);
+    }
+  };
+
   // Submit Data and Route Lifecycle to success screen
   const handleFinalizeCheckout = async (e) => {
     e.preventDefault();
@@ -105,7 +127,7 @@ export default function CryptoPayment() {
     setError("");
 
     try {
-      const token = localStorage.getItem("token"); // Assuming your application uses Bearer authorization tokens
+      const token = localStorage.getItem("token"); 
       
       // Hit the explicit route we updated in your backend
       await axios.post(
@@ -120,7 +142,7 @@ export default function CryptoPayment() {
         }
       );
 
-      // Route the user over to the Order Success receipt view page
+      clearCart(); // 🌟 Clear cart ONLY when valid blockchain transaction payload verification logs are submitted
       navigate("/order-success", { state: { orderId, totalAmount, isCrypto: true } });
     } catch (err) {
       console.error(err);
@@ -263,10 +285,20 @@ export default function CryptoPayment() {
         {/* Master Execution Submission */}
         <button
           type="submit"
-          disabled={isSubmitting || !walletAddress}
+          disabled={isSubmitting || !walletAddress || isAborting}
           className="w-full mt-4 py-3 bg-neutral-900 hover:bg-black disabled:bg-neutral-300 text-white font-semibold rounded-lg shadow transition-all text-sm tracking-wide"
         >
           {isSubmitting ? "Processing Order Context..." : "Confirm Payment & Complete Checkout"}
+        </button>
+
+        {/* 🌟 ESCAPE PIPELINE TRICK LINK OUT BUTTON */}
+        <button
+          type="button"
+          disabled={isAborting || isSubmitting}
+          onClick={handleCancelAndReturn}
+          className="w-full py-2.5 border border-gray-300 text-gray-600 rounded-lg text-xs uppercase tracking-widest font-bold hover:bg-gray-50 transition disabled:opacity-50"
+        >
+          {isAborting ? 'Restoring Cart Matrix...' : '← Change Payment Method'}
         </button>
       </form>
     </div>
