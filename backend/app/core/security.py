@@ -11,7 +11,7 @@ load_dotenv()
 # Retrieve the secret key from the environment
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES =  15
+ACCESS_TOKEN_EXPIRE_MINUTES =  1440
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
