@@ -1,10 +1,21 @@
+import { useEffect } from 'react'; // 🌟 Added useEffect import
 import { Link, useLocation } from 'react-router-dom';
 
 export default function OrderSuccess() {
   const location = useLocation();
   
-  // 🌟 Extract the crypto state and order tracking info passed from the router
-  const { orderId, isCrypto } = location.state || { orderId: null, isCrypto: false };
+  // 🌟 Extract totalAmount from router state along with your order tracking info
+  const { orderId, isCrypto, totalAmount } = location.state || { orderId: null, isCrypto: false, totalAmount: 0 };
+
+  // 🌟 TikTok CompletePayment Funnel Tracking Lifecycle Hook
+  useEffect(() => {
+    if (window.ttq) {
+      window.ttq.track('CompletePayment', {
+        value: Number(totalAmount || 0),
+        currency: 'USD'
+      });
+    }
+  }, [location.state, totalAmount]);
 
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">

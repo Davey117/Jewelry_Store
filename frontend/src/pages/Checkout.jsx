@@ -17,6 +17,29 @@ export default function Checkout() {
     }
   }, [token, navigate]);
 
+  useEffect(() => {
+    if (!token) {
+      alert("Please sign in to complete your purchase.");
+      navigate('/login');
+    }
+  }, [token, navigate]);
+
+  // 🌟 2. Add this right below it for TikTok InitiateCheckout Funnel Tracking
+  useEffect(() => {
+    if (cart.length > 0 && window.ttq) {
+      window.ttq.track('InitiateCheckout', {
+        contents: cart.map(item => ({
+          content_id: String(item.id),
+          content_name: item.name,
+          quantity: item.quantity,
+          price: Number(item.price)
+        })),
+        value: Number(finalTotal), // Uses your dynamic campaign pricing total safely
+        currency: 'USD'
+      });
+    }
+  }, [cart.length, finalTotal]);
+
   const storedFirstName = localStorage.getItem('firstName') || '';
   const storedLastName = localStorage.getItem('lastName') || ''; 
   const storedEmail = localStorage.getItem('email') || '';

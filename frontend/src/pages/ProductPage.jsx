@@ -37,6 +37,20 @@ export default function ProductPage() {
         setProduct(data);
         setActiveImage(data.main_image_url || data.image_url); 
         await loadReviews();
+
+        // 🌟 TikTok ViewContent Funnel Tracking
+        if (window.ttq) {
+          window.ttq.track('ViewContent', {
+            contents: [{
+              content_id: String(data.id),
+              content_name: data.name,
+              price: Number(data.price)
+            }],
+            value: Number(data.price),
+            currency: 'USD'
+          });
+        }
+
       } catch (error) {
         console.error("Failed to load product details", error);
       } finally {
@@ -90,6 +104,21 @@ export default function ProductPage() {
       return;
     }
     setSizeError('');
+
+    // 🌟 TikTok AddToCart Funnel Tracking
+    if (window.ttq) {
+      window.ttq.track('AddToCart', {
+        contents: [{
+          content_id: String(product.id),
+          content_name: product.name,
+          price: Number(product.price),
+          quantity: 1
+        }],
+        value: Number(product.price),
+        currency: 'USD'
+      });
+    }
+
     addToCart({
       ...product,
       chosenSize: selectedSize || null // Appends size specifications cleanly to globally managed line records
